@@ -109,10 +109,10 @@ export default function ChannelsPageClient() {
     
     let m = true; 
     async function init() {
-      if (m) setUserId(user.id);
-      const { data: currentUser } = await supabase.from("users").select("role").eq("id", user.id).single();
+      if (m && user) setUserId(user.id);
+      const { data: currentUser } = await supabase.from("users").select("role").eq("id", user?.id).single();
       if (m) setUserRole(currentUser?.role || "user");
-      const { data: memberRows } = await supabase.from("club_members").select("club_id, role").eq("user_id", user.id);
+      const { data: memberRows } = await supabase.from("club_members").select("club_id, role").eq("user_id", user?.id);
     if (!m || !memberRows || memberRows.length === 0) { if (m) { setClubs([]); setClubsLoading(false); } return; }
     const clubIds = memberRows.map((r: any) => r.club_id);
     const { data: clubsData } = await supabase.from("clubs").select("*").in("id", clubIds);
