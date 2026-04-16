@@ -82,7 +82,7 @@ export default function DiscoverRightPanel({ initialData, userId }: { initialDat
               <div className="disc-rp-name">{p.name}</div>
               <div className="disc-rp-role">{p.role}</div>
               <div className="disc-rp-tags">
-                {p.tags.map((t) => (
+                {p.tags.map((t: any) => (
                   <span key={t} className="disc-rp-tag">{t}</span>
                 ))}
               </div>
