@@ -37,27 +37,14 @@ function getInitials(name: string | null): string {
 export default function TopNav() {
   const router = useRouter();
   const pathname = usePathname();
-  const { user, loading: authLoading } = useAuth();
+  const { user } = useAuth();
   const [profile, setProfile] = useState<any>(null);
   const [ddOpen, setDdOpen] = useState(false);
   const [networkOpen, setNetworkOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
 
-  // Show profile info from auth metadata immediately, then upgrade with DB data
   useEffect(() => {
     if (!user) return;
-    // Instant: use auth metadata for immediate display
-    const meta = user.user_metadata;
-    if (meta && !profile) {
-      setProfile({
-        id: user.id,
-        full_name: meta.full_name || meta.name || null,
-        avatar_url: meta.avatar_url || meta.picture || null,
-        stream: null,
-        year: null,
-      });
-    }
-    // Then upgrade with full DB profile
     (async () => {
       const { data: prof } = await supabase.from("users").select("id, full_name, stream, year, avatar_url").eq("id", user.id).single();
       if (prof) setProfile(prof);

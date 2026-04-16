@@ -443,20 +443,31 @@
 }
 .disc-pcard-connect {
   width: 100%;
-  background: transparent;
-  border: 1px solid var(--border2);
+  background: rgba(158,240,26,.08);
+  border: 1px solid rgba(158,240,26,.25);
   border-radius: 8px;
   padding: 8px;
   font-size: 11px;
   font-weight: 700;
-  color: var(--sub);
+  color: var(--lime);
   font-family: var(--font-inter), 'Inter', sans-serif;
   cursor: pointer;
   transition: all .15s;
 }
 .disc-pcard-connect:hover {
-  background: rgba(255,255,255,.06);
-  color: #fff;
+  background: rgba(158,240,26,.14);
+  border-color: rgba(158,240,26,.4);
+  color: var(--lime);
+}
+.disc-pcard-connect.following {
+  background: transparent;
+  border-color: var(--border2);
+  color: var(--sub);
+}
+.disc-pcard-connect.following:hover {
+  background: rgba(251,113,133,.1);
+  border-color: rgba(251,113,133,.3);
+  color: var(--coral);
 }
 
 /* ── FEATURED MATCH ── */
