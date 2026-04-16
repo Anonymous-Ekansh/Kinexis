@@ -1,8 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase";
-import { useAuth } from "@/contexts/AuthContext";
+import { useState } from "react";
 
 interface FeaturedProfile {
   initials: string;
@@ -69,70 +67,36 @@ function getInitials(name: string | null): string {
   return name.split(" ").map(w => w[0]).join("").toUpperCase().slice(0, 2);
 }
 
-export default function FeaturedMatch() {
-  const [profiles, setProfiles] = useState<FeaturedProfile[]>(FALLBACK_PROFILES);
+function buildProfiles(users: any[]): FeaturedProfile[] {
+  if (!users || users.length === 0) return FALLBACK_PROFILES;
+  
+  const mapped: FeaturedProfile[] = users.slice(0, 4).map((u: any, i: number) => ({
+    initials: getInitials(u.full_name),
+    name: u.full_name || "Unnamed",
+    role: `${u.stream ? u.stream.slice(0, 15) : "Student"} · ${u.year || ""}`,
+    vibe: u.currently_focused_on || "Exploring interests",
+    match: Math.floor(70 + Math.random() * 25),
+    bg: ACCENT_COLORS[i % ACCENT_COLORS.length],
+    tags: [...(u.interests || []).slice(0, 3), ...((u.looking_for || []).includes("Hackathon team") ? ["Looking for team"] : [])],
+    icebreaker: u.currently_focused_on
+      ? `💬 Icebreaker: Ask ${u.full_name?.split(" ")[0] || "them"} about ${u.currently_focused_on.toLowerCase()}.`
+      : `💬 Icebreaker: Say hi to ${u.full_name?.split(" ")[0] || "them"} and discover shared interests!`,
+  }));
+  // Fill up to 4 with fallback
+  const remaining = FALLBACK_PROFILES.slice(mapped.length);
+  return [...mapped, ...remaining].slice(0, 4);
+}
+
+interface FeaturedMatchProps {
+  users?: any[];
+}
+
+export default function FeaturedMatch({ users }: FeaturedMatchProps) {
+  const [profiles] = useState<FeaturedProfile[]>(() => buildProfiles(users || []));
   const [idx, setIdx] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const { user, loading: authLoading } = useAuth();
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      if (authLoading) return;
-      try {
-        const { data: users } = await supabase
-          .from("users")
-          .select("id, full_name, stream, year, interests, currently_focused_on, looking_for")
-          .neq("id", user?.id || "")
-          .limit(4);
-
-        if (!cancelled && users && users.length > 0) {
-          const mapped: FeaturedProfile[] = users.map((u: any, i: number) => ({
-            initials: getInitials(u.full_name),
-            name: u.full_name || "Unnamed",
-            role: `${u.stream ? u.stream.slice(0, 15) : "Student"} · ${u.year || ""}`,
-            vibe: u.currently_focused_on || "Exploring interests",
-            match: Math.floor(70 + Math.random() * 25),
-            bg: ACCENT_COLORS[i % ACCENT_COLORS.length],
-            tags: [...(u.interests || []).slice(0, 3), ...((u.looking_for || []).includes("Hackathon team") ? ["Looking for team"] : [])],
-            icebreaker: u.currently_focused_on
-              ? `💬 Icebreaker: Ask ${u.full_name?.split(" ")[0] || "them"} about ${u.currently_focused_on.toLowerCase()}.`
-              : `💬 Icebreaker: Say hi to ${u.full_name?.split(" ")[0] || "them"} and discover shared interests!`,
-          }));
-          // Merge: real profiles first, then fallback to fill up to 4
-          const remaining = FALLBACK_PROFILES.slice(mapped.length);
-          setProfiles([...mapped, ...remaining].slice(0, 4));
-        }
-      } catch {
-        // Keep fallback
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => { cancelled = true; };
-  }, [user, authLoading]);
 
   const p = profiles[idx];
   const next = () => setIdx((prev) => (prev + 1) % profiles.length);
-
-  if (loading) {
-    return (
-      <div className="disc-featured">
-        <div className="disc-featured-grid" />
-        <div className="disc-featured-glow" />
-        <div className="disc-featured-inner" style={{ opacity: 0.5 }}>
-          <div className="disc-featured-av-wrap">
-            <div className="pf-skeleton" style={{ width: 64, height: 64, borderRadius: 16 }} />
-          </div>
-          <div className="disc-featured-body" style={{ flex: 1 }}>
-            <div className="pf-skeleton pf-skeleton-line" style={{ width: "40%", marginBottom: 8 }} />
-            <div className="pf-skeleton pf-skeleton-line-sm" style={{ width: "30%", marginBottom: 12 }} />
-            <div className="pf-skeleton" style={{ height: 20, width: "60%", borderRadius: 8 }} />
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="disc-featured">

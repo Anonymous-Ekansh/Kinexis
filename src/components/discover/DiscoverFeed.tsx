@@ -243,7 +243,7 @@ export default function DiscoverFeed({ initialData, userId, onSearchNavigate }: 
         <div className="disc-sec-h">
           <h2 className="disc-sec-title">Featured Match</h2>
         </div>
-        <FeaturedMatch />
+        <FeaturedMatch users={initialData?.initialFeedProfiles} />
       </div>
 
       {/* Open Collabs */}

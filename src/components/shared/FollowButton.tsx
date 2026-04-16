@@ -71,7 +71,8 @@ export default function FollowButton({ targetUserId, className = "", onFollowCha
     onFollowChange?.(nextState);
   };
 
-  if (loading || (currentUserId === targetUserId)) return null;
+  // Hide only for own profile
+  if (currentUserId && currentUserId === targetUserId) return null;
 
   return (
     <button 
@@ -79,8 +80,11 @@ export default function FollowButton({ targetUserId, className = "", onFollowCha
       onClick={handleFollow}
       onMouseEnter={() => setIsHovering(true)}
       onMouseLeave={() => setIsHovering(false)}
+      disabled={loading}
+      style={loading ? { opacity: 0.6 } : undefined}
     >
-      {isFollowing ? (isHovering ? "Unfollow" : "Following") : "Follow"}
+      {loading ? "Follow" : isFollowing ? (isHovering ? "Unfollow" : "Following") : "Follow"}
     </button>
   );
 }
+
