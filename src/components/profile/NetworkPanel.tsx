@@ -160,7 +160,7 @@ export default function NetworkPanel({
 function UserCard({ user, onFollowChange }: { user: User, onFollowChange?: () => void }) {
   return (
     <div className="pf-network-user-card group">
-      <Link href={`/profile/${user.id}`} className="flex items-center gap-3 flex-1 min-w-0">
+      <Link href={`/profile/${user.id}`} prefetch={false} className="flex items-center gap-3 flex-1 min-w-0">
         <div className="pf-network-av-lg">
           {user.avatar_url ? (
             <img src={user.avatar_url} alt="" className="w-full h-full object-cover" />

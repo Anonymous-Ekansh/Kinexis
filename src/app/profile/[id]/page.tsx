@@ -1191,7 +1191,7 @@ export default function ProfilePage() {
             <div className="pf-r-card pf-reveal pf-reveal-d3">
               <div className="pf-r-card-h">
                 <span className="pf-r-card-title">People with similar interests</span>
-                <Link href="/discover" style={{ textDecoration: 'none' }}><span className="pf-r-card-action">See more</span></Link>
+                <Link href="/discover" prefetch={false} style={{ textDecoration: 'none' }}><span className="pf-r-card-action">See more</span></Link>
               </div>
               <div className="pf-sim-grid">
                 {similarPeople.length > 0 ? (

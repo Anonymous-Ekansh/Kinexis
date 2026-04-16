@@ -87,7 +87,7 @@ export default function SignupPage() {
         </div>
 
         <div className="auth-footer">
-          Already have an account? <Link href="/login">Log in</Link>
+          Already have an account? <Link href="/login" prefetch={false}>Log in</Link>
         </div>
       </div>
     </div>

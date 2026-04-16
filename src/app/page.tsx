@@ -361,15 +361,15 @@ export default function Home() {
           </div>
           <div className="nav-r">
             {authUser ? (
-              <Link href="/profile" style={{ textDecoration: "none" }}>
+              <Link href="/profile" prefetch={false} style={{ textDecoration: "none" }}>
                 <div style={{ width: 34, height: 34, borderRadius: "50%", background: "#9EF01A", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "var(--font-syne),'Syne',sans-serif", fontSize: 12, fontWeight: 800, color: "#111", cursor: "pointer", transition: "transform 0.15s, box-shadow 0.15s" }}>
                   {authUser.initials}
                 </div>
               </Link>
             ) : (
               <>
-                <Link href="/login" className="btn-login">Log in</Link>
-                <Link href="/signup" className="btn-signup">Sign up free</Link>
+                <Link href="/login" prefetch={false} className="btn-login">Log in</Link>
+                <Link href="/signup" prefetch={false} className="btn-signup">Sign up free</Link>
               </>
             )}
             <button className={`hamburger${menuOpen ? " open" : ""}`} aria-label="Menu" onClick={toggleMenu}>
@@ -402,17 +402,17 @@ export default function Home() {
           <div className="mobile-menu-links">
             <a onClick={toggleMenu}>Discover</a>
             <a onClick={toggleMenu}>Projects</a>
-            <Link href="/events" onClick={toggleMenu}>Events</Link>
+            <Link href="/events" prefetch={false} onClick={toggleMenu}>Events</Link>
             <a onClick={toggleMenu}>Clubs</a>
             <a onClick={toggleMenu}>Streams</a>
           </div>
           <div className="mobile-menu-ctas">
             {authUser ? (
-              <Link href="/profile" className="btn-signup-m">My Profile</Link>
+              <Link href="/profile" prefetch={false} className="btn-signup-m">My Profile</Link>
             ) : (
               <>
-                <Link href="/signup" className="btn-signup-m">Sign up free</Link>
-                <Link href="/login" className="btn-login-m">Log in</Link>
+                <Link href="/signup" prefetch={false} className="btn-signup-m">Sign up free</Link>
+                <Link href="/login" prefetch={false} className="btn-login-m">Log in</Link>
               </>
             )}
           </div>
@@ -433,8 +433,8 @@ export default function Home() {
               Find collaborators, not just classmates.
             </p>
             <div className="hero-ctas">
-              <Link href="/signup" className="cta-primary">Create your profile →</Link>
-              <Link href="/login" className="cta-secondary">Log in</Link>
+              <Link href="/signup" prefetch={false} className="cta-primary">Create your profile →</Link>
+              <Link href="/login" prefetch={false} className="cta-secondary">Log in</Link>
             </div>
             <div className="hero-sp">
               <div className="av-stack">

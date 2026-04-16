@@ -84,19 +84,19 @@ export default function TopNav() {
   return (
     <>
       <nav className="pf-nav">
-        <Link href="/" style={{ textDecoration: "none", display: "flex", alignItems: "center" }}>
+        <Link href="/" prefetch={false} style={{ textDecoration: "none", display: "flex", alignItems: "center" }}>
           <LogoSVG />
         </Link>
         <div className="pf-nav-links">
-          <Link href="/discover" className={pathname === "/discover" ? "active" : ""}>Discover</Link>
-          <Link href="/channels" className={pathname === "/channels" ? "active" : ""}>Channels</Link>
-          <Link href="/feed" className={pathname === "/feed" ? "active" : ""}>Campus Feed</Link>
-          <Link href="/collabs" className={pathname === "/collabs" ? "active" : ""}>Collabs</Link>
-          <Link href="/events" className={pathname === "/events" ? "active" : ""}>Events</Link>
-          <Link href="/clubs" className={pathname === "/clubs" ? "active" : ""}>Clubs</Link>
+          <Link href="/discover" prefetch={false} className={pathname === "/discover" ? "active" : ""}>Discover</Link>
+          <Link href="/channels" prefetch={false} className={pathname === "/channels" ? "active" : ""}>Channels</Link>
+          <Link href="/feed" prefetch={false} className={pathname === "/feed" ? "active" : ""}>Campus Feed</Link>
+          <Link href="/collabs" prefetch={false} className={pathname === "/collabs" ? "active" : ""}>Collabs</Link>
+          <Link href="/events" prefetch={false} className={pathname === "/events" ? "active" : ""}>Events</Link>
+          <Link href="/clubs" prefetch={false} className={pathname === "/clubs" ? "active" : ""}>Clubs</Link>
         </div>
         <div className="pf-nav-r">
-          <Link href="/messages" className={`pf-nav-notif ${pathname === "/messages" ? "active" : ""}`} style={{ textDecoration: 'none', color: 'var(--lime)' }} title="Messages"><MessageSquare size={15} /></Link>
+          <Link href="/messages" prefetch={false} className={`pf-nav-notif ${pathname === "/messages" ? "active" : ""}`} style={{ textDecoration: 'none', color: 'var(--lime)' }} title="Messages"><MessageSquare size={15} /></Link>
           {profile ? (
             <>
               <div className="pf-nav-profile" onClick={e => { e.stopPropagation(); setDdOpen(v => !v); }}>
@@ -112,7 +112,7 @@ export default function TopNav() {
                   <div style={{ fontSize: 13, fontWeight: 700, color: "#fff" }}>{profile.full_name || "User"}</div>
                   <div style={{ fontSize: 11, color: "rgba(255,255,255,0.38)" }}>{profile.stream || ""}{profile.year ? ` · ${profile.year}` : ""}</div>
                 </div>
-                <Link href="/profile" style={{ textDecoration: "none", display: "block" }} className="pf-dd-item">◌ &nbsp;My Profile</Link>
+                <Link href="/profile" prefetch={false} style={{ textDecoration: "none", display: "block" }} className="pf-dd-item">◌ &nbsp;My Profile</Link>
                 <div 
                   className="pf-dd-item" 
                   onClick={(e) => { e.stopPropagation(); setNetworkOpen(true); setDdOpen(false); }}
@@ -120,7 +120,7 @@ export default function TopNav() {
                 >
                   ◎ &nbsp;My Network
                 </div>
-                <Link href="/saved" style={{ textDecoration: "none", display: "block" }} className="pf-dd-item">◻ &nbsp;Saved</Link>
+                <Link href="/saved" prefetch={false} style={{ textDecoration: "none", display: "block" }} className="pf-dd-item">◻ &nbsp;Saved</Link>
                 <div style={{ height: 1, background: "rgba(255,255,255,0.07)", margin: "4px 0" }} />
                 <div className="pf-dd-item" style={{ color: "#FB7185" }} onClick={handleSignOut}>↪ &nbsp;Log out</div>
               </div>
@@ -157,24 +157,24 @@ export default function TopNav() {
           </button>
         </div>
         <div className="pf-mobile-menu-links">
-          <Link href="/discover" onClick={toggleMenu} className={pathname === "/discover" ? "active" : ""}>Discover</Link>
-          <Link href="/channels" onClick={toggleMenu} className={pathname === "/channels" ? "active" : ""}>Channels</Link>
-          <Link href="/feed" onClick={toggleMenu} className={pathname === "/feed" ? "active" : ""}>Campus Feed</Link>
-          <Link href="/collabs" onClick={toggleMenu} className={pathname === "/collabs" ? "active" : ""}>Collabs</Link>
-          <Link href="/events" onClick={toggleMenu} className={pathname === "/events" ? "active" : ""}>Events</Link>
-          <Link href="/messages" onClick={toggleMenu} className={pathname === "/messages" ? "active" : ""}>Messages</Link>
-          <Link href="/clubs" onClick={toggleMenu} className={pathname === "/clubs" ? "active" : ""}>Clubs</Link>
+          <Link href="/discover" prefetch={false} onClick={toggleMenu} className={pathname === "/discover" ? "active" : ""}>Discover</Link>
+          <Link href="/channels" prefetch={false} onClick={toggleMenu} className={pathname === "/channels" ? "active" : ""}>Channels</Link>
+          <Link href="/feed" prefetch={false} onClick={toggleMenu} className={pathname === "/feed" ? "active" : ""}>Campus Feed</Link>
+          <Link href="/collabs" prefetch={false} onClick={toggleMenu} className={pathname === "/collabs" ? "active" : ""}>Collabs</Link>
+          <Link href="/events" prefetch={false} onClick={toggleMenu} className={pathname === "/events" ? "active" : ""}>Events</Link>
+          <Link href="/messages" prefetch={false} onClick={toggleMenu} className={pathname === "/messages" ? "active" : ""}>Messages</Link>
+          <Link href="/clubs" prefetch={false} onClick={toggleMenu} className={pathname === "/clubs" ? "active" : ""}>Clubs</Link>
         </div>
         <div className="pf-mobile-menu-ctas">
           {profile ? (
             <>
-              <Link href="/profile" className="pf-mobile-menu-btn-primary" onClick={toggleMenu}>My Profile</Link>
+              <Link href="/profile" prefetch={false} className="pf-mobile-menu-btn-primary" onClick={toggleMenu}>My Profile</Link>
               <button className="pf-mobile-menu-btn-secondary" onClick={() => { toggleMenu(); handleSignOut(); }}>Log out</button>
             </>
           ) : (
             <>
-              <Link href="/signup" className="pf-mobile-menu-btn-primary">Sign up free</Link>
-              <Link href="/login" className="pf-mobile-menu-btn-secondary" onClick={toggleMenu}>Log in</Link>
+              <Link href="/signup" prefetch={false} className="pf-mobile-menu-btn-primary">Sign up free</Link>
+              <Link href="/login" prefetch={false} className="pf-mobile-menu-btn-secondary" onClick={toggleMenu}>Log in</Link>
             </>
           )}
         </div>

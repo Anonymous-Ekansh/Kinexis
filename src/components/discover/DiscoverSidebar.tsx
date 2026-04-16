@@ -132,7 +132,7 @@ export default function DiscoverSidebar({ activeSection = "foryou", onSectionCha
       <div className="disc-sb-label">MY CAMPUS</div>
       <div className="disc-sb-links">
         {profileId ? (
-          <Link href={`/profile/${profileId}`} className="disc-sb-link" style={{ textDecoration: "none" }}>
+          <Link href={`/profile/${profileId}`} prefetch={false} className="disc-sb-link" style={{ textDecoration: "none" }}>
             <span className="disc-sb-link-icon">◌</span> My Profile
           </Link>
         ) : (

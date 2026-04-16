@@ -443,7 +443,7 @@ export default function DiscoverFeed() {
       <div className="disc-reveal">
         <div className="disc-sec-h">
           <h2 className="disc-sec-title">Open Collabs</h2>
-          <Link href="/collabs" className="disc-sec-action" style={{ textDecoration: "none" }}>Browse all →</Link>
+          <Link href="/collabs" prefetch={false} className="disc-sec-action" style={{ textDecoration: "none" }}>Browse all →</Link>
         </div>
         {loadingCollabs ? (
           <SkeletonRow count={4} />
@@ -462,7 +462,7 @@ export default function DiscoverFeed() {
       <div className="disc-reveal">
         <div className="disc-sec-h">
           <h2 className="disc-sec-title">Events Near You</h2>
-          <Link href="/events" className="disc-sec-action" style={{ textDecoration: "none" }}>All events →</Link>
+          <Link href="/events" prefetch={false} className="disc-sec-action" style={{ textDecoration: "none" }}>All events →</Link>
         </div>
         {loadingEvents ? (
           <SkeletonRow count={5} />
@@ -481,7 +481,7 @@ export default function DiscoverFeed() {
       <div className="disc-reveal">
         <div className="disc-sec-h">
           <h2 className="disc-sec-title">Clubs &amp; Cells</h2>
-          <Link href="/clubs" className="disc-sec-action" style={{ textDecoration: "none" }}>See all →</Link>
+          <Link href="/clubs" prefetch={false} className="disc-sec-action" style={{ textDecoration: "none" }}>See all →</Link>
         </div>
         {loadingClubs ? (
           <SkeletonRow count={6} />
