@@ -75,7 +75,7 @@ export default function DiscoverRightPanel({ initialData, userId }: { initialDat
       {/* People like you, nearby */}
       <div className="disc-rp-label">PEOPLE LIKE YOU, NEARBY</div>
       <div className="disc-rp-people">
-        {people.map((p, i) => (
+        {people.map((p: any, i: number) => (
           <div key={i} className="disc-rp-person cursor-pointer" onClick={() => navigateToProfile(p.id)}>
             <div className="disc-rp-av" style={{ background: p.bg }}>{p.initials}</div>
             <div className="disc-rp-person-info">
