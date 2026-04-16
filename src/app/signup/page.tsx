@@ -76,15 +76,6 @@ export default function SignupPage() {
           Continue with Google
         </button>
 
-        <div className="auth-divider">
-          <span>or</span>
-        </div>
-
-        <div className="auth-form">
-          <input type="email" placeholder="Email address" className="auth-input" />
-          <input type="password" placeholder="Password" className="auth-input" />
-          <button className="auth-submit-btn">Sign up with Email</button>
-        </div>
 
         <div className="auth-footer">
           Already have an account? <Link href="/login" prefetch={false}>Log in</Link>
