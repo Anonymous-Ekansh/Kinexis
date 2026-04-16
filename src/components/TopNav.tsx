@@ -1,0 +1,184 @@
+"use client";
+
+import { useEffect, useState, useCallback } from "react";
+import Link from "next/link";
+import { useRouter, usePathname } from "next/navigation";
+import { MessageSquare } from "lucide-react";
+import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/contexts/AuthContext";
+import NetworkPanel from "./profile/NetworkPanel";
+import "@/app/profile/profile.css"; // Reuse nav styling
+
+function LogoSVG() {
+  return (
+    <svg width={180} height={38} viewBox="0 15 420 70" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <g transform="translate(18,18) scale(0.38)">
+        <circle cx="36" cy="20" r="5.5" fill="#9EF01A" />
+        <circle cx="36" cy="60" r="7.5" fill="#9EF01A" />
+        <circle cx="36" cy="100" r="5.5" fill="#9EF01A" />
+        <line x1="36" y1="25.5" x2="36" y2="52.5" stroke="#9EF01A" strokeWidth="4.5" strokeLinecap="round" />
+        <line x1="36" y1="67.5" x2="36" y2="94.5" stroke="#9EF01A" strokeWidth="4.5" strokeLinecap="round" />
+        <circle cx="92" cy="20" r="5.5" fill="#9EF01A" />
+        <path d="M43 53 Q60 36 87 23" stroke="#9EF01A" strokeWidth="4.5" strokeLinecap="round" fill="none" />
+        <circle cx="92" cy="100" r="5.5" fill="#9EF01A" />
+        <path d="M43 67 Q60 84 87 97" stroke="#9EF01A" strokeWidth="4.5" strokeLinecap="round" fill="none" />
+      </g>
+      <line x1="65" y1="22" x2="65" y2="78" stroke="rgba(255,255,255,0.07)" strokeWidth="1" />
+      <text x="76" y="58" fontFamily="'Syne','Inter',sans-serif" fontSize="42" fontWeight="800" fill="#FFFFFF" letterSpacing="-1.5">kinexis</text>
+    </svg>
+  );
+}
+
+function getInitials(name: string | null): string {
+  if (!name) return "?";
+  return name.split(" ").map(w => w[0]).join("").toUpperCase().slice(0, 2);
+}
+
+export default function TopNav() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const { user } = useAuth();
+  const [profile, setProfile] = useState<any>(null);
+  const [ddOpen, setDdOpen] = useState(false);
+  const [networkOpen, setNetworkOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  useEffect(() => {
+    if (!user) return;
+    (async () => {
+      const { data: prof } = await supabase.from("users").select("id, full_name, stream, year, avatar_url").eq("id", user.id).single();
+      if (prof) setProfile(prof);
+    })();
+  }, [user]);
+
+  /* Close dropdown */
+  useEffect(() => {
+    if (!ddOpen) return;
+    const handler = () => setDdOpen(false);
+    document.addEventListener("click", handler);
+    return () => document.removeEventListener("click", handler);
+  }, [ddOpen]);
+
+  /* Escape key for mobile menu */
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && menuOpen) setMenuOpen(false);
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [menuOpen]);
+
+  /* Body scroll lock */
+  useEffect(() => {
+    document.body.style.overflow = menuOpen ? "hidden" : "";
+    return () => { document.body.style.overflow = ""; };
+  }, [menuOpen]);
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    router.replace("/");
+  };
+
+  const toggleMenu = useCallback(() => setMenuOpen(v => !v), []);
+
+  return (
+    <>
+      <nav className="pf-nav">
+        <Link href="/" style={{ textDecoration: "none", display: "flex", alignItems: "center" }}>
+          <LogoSVG />
+        </Link>
+        <div className="pf-nav-links">
+          <Link href="/discover" className={pathname === "/discover" ? "active" : ""}>Discover</Link>
+          <Link href="/channels" className={pathname === "/channels" ? "active" : ""}>Channels</Link>
+          <Link href="/feed" className={pathname === "/feed" ? "active" : ""}>Campus Feed</Link>
+          <Link href="/collabs" className={pathname === "/collabs" ? "active" : ""}>Collabs</Link>
+          <Link href="/events" className={pathname === "/events" ? "active" : ""}>Events</Link>
+          <Link href="/clubs" className={pathname === "/clubs" ? "active" : ""}>Clubs</Link>
+        </div>
+        <div className="pf-nav-r">
+          <Link href="/messages" className={`pf-nav-notif ${pathname === "/messages" ? "active" : ""}`} style={{ textDecoration: 'none', color: 'var(--lime)' }} title="Messages"><MessageSquare size={15} /></Link>
+          {profile ? (
+            <>
+              <div className="pf-nav-profile" onClick={e => { e.stopPropagation(); setDdOpen(v => !v); }}>
+                <div className="pf-nav-av">{profile.avatar_url ? <img src={profile.avatar_url} alt="" /> : getInitials(profile.full_name)}</div>
+                <div>
+                  <div className="pf-nav-profile-name">{profile.full_name?.split(" ")[0] || "User"}</div>
+                  <div className="pf-nav-profile-role">{profile.stream ? profile.stream.slice(0, 20) : ""}</div>
+                </div>
+                <span className="pf-nav-chevron">▾</span>
+              </div>
+              <div className={`pf-dropdown${ddOpen ? " open" : ""}`} onClick={e => e.stopPropagation()}>
+                <div className="pf-dd-header">
+                  <div style={{ fontSize: 13, fontWeight: 700, color: "#fff" }}>{profile.full_name || "User"}</div>
+                  <div style={{ fontSize: 11, color: "rgba(255,255,255,0.38)" }}>{profile.stream || ""}{profile.year ? ` · ${profile.year}` : ""}</div>
+                </div>
+                <Link href="/profile" style={{ textDecoration: "none", display: "block" }} className="pf-dd-item">◌ &nbsp;My Profile</Link>
+                <div 
+                  className="pf-dd-item" 
+                  onClick={(e) => { e.stopPropagation(); setNetworkOpen(true); setDdOpen(false); }}
+                  style={{ cursor: "pointer" }}
+                >
+                  ◎ &nbsp;My Network
+                </div>
+                <Link href="/saved" style={{ textDecoration: "none", display: "block" }} className="pf-dd-item">◻ &nbsp;Saved</Link>
+                <div style={{ height: 1, background: "rgba(255,255,255,0.07)", margin: "4px 0" }} />
+                <div className="pf-dd-item" style={{ color: "#FB7185" }} onClick={handleSignOut}>↪ &nbsp;Log out</div>
+              </div>
+            </>
+          ) : (
+            <div className="pf-skeleton pf-skeleton-avatar" style={{ width: 34, height: 34, borderRadius: 9 }} />
+          )}
+          <button className={`pf-hamburger${menuOpen ? " open" : ""}`} onClick={toggleMenu} aria-label="Menu">
+            <span /><span /><span />
+          </button>
+        </div>
+
+        {profile && (
+          <NetworkPanel 
+            isOpen={networkOpen} 
+            onClose={() => setNetworkOpen(false)} 
+            initialProfileId={profile.id} 
+          />
+        )}
+      </nav>
+
+      {/* Mobile menu overlay */}
+      <div className={`pf-menu-overlay${menuOpen ? " open" : ""}`} onClick={toggleMenu} />
+
+      {/* Mobile side menu */}
+      <div className={`pf-mobile-menu${menuOpen ? " open" : ""}`}>
+        <div className="pf-mobile-menu-header">
+          <LogoSVG />
+          <button className="pf-mobile-menu-close" onClick={toggleMenu} aria-label="Close">
+            <svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <line x1="2" y1="2" x2="14" y2="14" stroke="rgba(255,255,255,0.6)" strokeWidth="1.8" strokeLinecap="round" />
+              <line x1="14" y1="2" x2="2" y2="14" stroke="rgba(255,255,255,0.6)" strokeWidth="1.8" strokeLinecap="round" />
+            </svg>
+          </button>
+        </div>
+        <div className="pf-mobile-menu-links">
+          <Link href="/discover" onClick={toggleMenu} className={pathname === "/discover" ? "active" : ""}>Discover</Link>
+          <Link href="/channels" onClick={toggleMenu} className={pathname === "/channels" ? "active" : ""}>Channels</Link>
+          <Link href="/feed" onClick={toggleMenu} className={pathname === "/feed" ? "active" : ""}>Campus Feed</Link>
+          <Link href="/collabs" onClick={toggleMenu} className={pathname === "/collabs" ? "active" : ""}>Collabs</Link>
+          <Link href="/events" onClick={toggleMenu} className={pathname === "/events" ? "active" : ""}>Events</Link>
+          <Link href="/messages" onClick={toggleMenu} className={pathname === "/messages" ? "active" : ""}>Messages</Link>
+          <Link href="/clubs" onClick={toggleMenu} className={pathname === "/clubs" ? "active" : ""}>Clubs</Link>
+        </div>
+        <div className="pf-mobile-menu-ctas">
+          {profile ? (
+            <>
+              <Link href="/profile" className="pf-mobile-menu-btn-primary" onClick={toggleMenu}>My Profile</Link>
+              <button className="pf-mobile-menu-btn-secondary" onClick={() => { toggleMenu(); handleSignOut(); }}>Log out</button>
+            </>
+          ) : (
+            <>
+              <Link href="/signup" className="pf-mobile-menu-btn-primary">Sign up free</Link>
+              <Link href="/login" className="pf-mobile-menu-btn-secondary" onClick={toggleMenu}>Log in</Link>
+            </>
+          )}
+        </div>
+      </div>
+    </>
+  );
+}
