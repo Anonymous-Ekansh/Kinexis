@@ -14,75 +14,75 @@ function InterestButton({ eventId, userId }: { eventId: string; userId: string }
   const [count, setCount] = useState(0);
 
   useEffect(() => {
-    let m = true;
-    async function load() {
+    let mounted = true;
+    async function fetchStatus() {
       // Get count
       const { count: c, error: cErr } = await supabase
         .from('event_interest')
         .select('*', { count: 'exact', head: true })
         .eq('event_id', eventId);
       
-      if (cErr) console.error('Supabase error:', cErr.message, cErr.code, cErr.details);
+      if (cErr) {
+        console.error('Supabase error:', cErr.message, cErr.code, cErr.details);
+      } else if (mounted && c !== null) {
+        setCount(c);
+      }
 
-      // Get user status
+      // Check if user is interested
       if (userId) {
-        const { data: d, error: uErr } = await supabase
+        const { data: interest, error: iErr } = await supabase
           .from('event_interest')
           .select('id')
           .eq('event_id', eventId)
           .eq('user_id', userId)
           .maybeSingle();
 
-        if (uErr) console.error('Supabase error:', uErr.message, uErr.code, uErr.details);
-        
-        if (m) {
-          if (c !== null) setCount(c);
-          if (d) setIsInterested(true);
+        if (iErr) {
+          console.error('Supabase error:', iErr.message, iErr.code, iErr.details);
+        } else if (mounted && interest) {
+          setIsInterested(true);
         }
-      } else {
-        if (m && c !== null) setCount(c);
       }
     }
-    if (eventId) load();
-    return () => { m = false; };
+    fetchStatus();
+    return () => { mounted = false; };
   }, [eventId, userId]);
 
-  const toggle = async (e: any) => {
+  const handleToggle = async (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!userId) return;
 
-    // Optimistic update
-    const currentlyInterested = isInterested;
-    setIsInterested(!currentlyInterested);
-    setCount(prev => currentlyInterested ? prev - 1 : prev + 1);
+    const wasInterested = isInterested;
+    
+    // Optimistic Update
+    setIsInterested(!wasInterested);
+    setCount(prev => wasInterested ? prev - 1 : prev + 1);
 
-    if (currentlyInterested) {
-      const { data, error } = await supabase
+    if (wasInterested) {
+      // Remove interest
+      const { error } = await supabase
         .from('event_interest')
         .delete()
         .eq('event_id', eventId)
         .eq('user_id', userId);
-      
+
       if (error) {
         console.error('Supabase error:', error.message, error.code, error.details);
-        // Revert
+        // Revert UI on error
         setIsInterested(true);
         setCount(prev => prev + 1);
-      } else if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('activityUpdated'));
       }
     } else {
-      const { data, error } = await supabase
+      // Add interest
+      const { error } = await supabase
         .from('event_interest')
         .insert({ event_id: eventId, user_id: userId });
-      
+
       if (error) {
         console.error('Supabase error:', error.message, error.code, error.details);
-        // Revert
+        // Revert UI on error
         setIsInterested(false);
         setCount(prev => prev - 1);
-      } else if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('activityUpdated'));
       }
     }
   };
@@ -90,7 +90,7 @@ function InterestButton({ eventId, userId }: { eventId: string; userId: string }
   return (
     <button 
       className={`btn-ec ${isInterested ? 'filled coral' : 'purple'}`} 
-      onClick={toggle}
+      onClick={handleToggle}
     >
       Interested {count > 0 ? `· ${count}` : ''}
     </button>
