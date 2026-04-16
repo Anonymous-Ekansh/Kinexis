@@ -1,8 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import FollowButton from "../shared/FollowButton";
 
 interface FeaturedProfile {
+  id?: string;
   initials: string;
   name: string;
   role: string;
@@ -71,6 +73,7 @@ function buildProfiles(users: any[]): FeaturedProfile[] {
   if (!users || users.length === 0) return FALLBACK_PROFILES;
   
   const mapped: FeaturedProfile[] = users.slice(0, 4).map((u: any, i: number) => ({
+    id: u.id,
     initials: getInitials(u.full_name),
     name: u.full_name || "Unnamed",
     role: `${u.stream ? u.stream.slice(0, 15) : "Student"} · ${u.year || ""}`,
@@ -123,7 +126,14 @@ export default function FeaturedMatch({ users }: FeaturedMatchProps) {
           </div>
           <div className="disc-featured-ice">{p.icebreaker}</div>
           <div className="disc-featured-actions">
-            <button className="disc-featured-btn-connect">Follow</button>
+            {p.id ? (
+              <FollowButton 
+                targetUserId={p.id} 
+                className="disc-featured-btn-connect"
+              />
+            ) : (
+              <button className="disc-featured-btn-connect">Follow</button>
+            )}
             <button className="disc-featured-btn-skip" onClick={next}>
               Skip for now
             </button>
