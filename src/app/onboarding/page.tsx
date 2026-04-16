@@ -7,6 +7,7 @@ import { useAuth } from "@/contexts/AuthContext";
 
 export default function OnboardingPage() {
   const router = useRouter();
+  const { user } = useAuth();
   
   const [step, setStep] = useState<number | 'finish'>(1);
   const [loading, setLoading] = useState(false);
