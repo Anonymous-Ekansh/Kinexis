@@ -7,17 +7,10 @@ import { useAuth } from "@/contexts/AuthContext";
 
 export default function OnboardingPage() {
   const router = useRouter();
-  const { user, loading: authLoading, hasProfile } = useAuth();
   
   const [step, setStep] = useState<number | 'finish'>(1);
   const [loading, setLoading] = useState(false);
   const [globalError, setGlobalError] = useState("");
-
-  useEffect(() => {
-    if (!authLoading && hasProfile === true) {
-      router.push("/discover");
-    }
-  }, [hasProfile, authLoading, router]);
 
   const [name, setName] = useState("");
   const [stream, setStream] = useState("");
@@ -626,7 +619,7 @@ export default function OnboardingPage() {
               <div className="f-av" style={{background: 'var(--coral)', color: '#fff'}}>SM</div>
               <div className="f-av" style={{background: 'var(--lime)'}}>+</div>
             </div>
-            <button className="btn-primary" style={{width: '100%', fontSize: '16px'}} onClick={() => window.location.href = '/discover'}>
+            <button className="btn-primary" style={{width: '100%', fontSize: '16px'}} onClick={() => router.push('/discover')}>
               Start exploring people &rarr;
             </button>
           </div>
