@@ -36,10 +36,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (data.session?.user) {
           const { data: profile } = await supabase
             .from('users')
-            .select('id')
+            .select('id, stream')
             .eq('id', data.session.user.id)
             .single();
-          setHasProfile(!!profile);
+          setHasProfile(!!(profile && profile.stream));
         } else {
           setHasProfile(false);
         }
@@ -59,10 +59,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           if (newSession?.user) {
             const { data: profile } = await supabase
               .from('users')
-              .select('id')
+              .select('id, stream')
               .eq('id', newSession.user.id)
               .single();
-            setHasProfile(!!profile);
+            setHasProfile(!!(profile && profile.stream));
           } else {
             setHasProfile(false);
           }

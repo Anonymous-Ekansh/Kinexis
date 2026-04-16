@@ -2,6 +2,7 @@
 
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
+import { useAuth } from "@/contexts/AuthContext";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
@@ -36,13 +37,17 @@ function LogoMark() {
 export default function SignupPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const { user, hasProfile, loading: authLoading } = useAuth();
 
   useEffect(() => {
-    (async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) router.replace("/discover");
-    })();
-  }, [router]);
+    if (!authLoading && user) {
+      if (hasProfile) {
+        router.replace("/discover");
+      } else {
+        router.replace("/onboarding");
+      }
+    }
+  }, [user, hasProfile, authLoading, router]);
 
   const originUrl = typeof window !== 'undefined' ? window.location.origin : '';
 
