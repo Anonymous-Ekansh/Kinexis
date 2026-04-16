@@ -9,44 +9,9 @@ function getInitials(name: string | null): string {
   if (!name) return "?";
   return name.split(" ").map(w => w[0]).join("").toUpperCase().slice(0, 2);
 }
-function InterestButton({ eventId, userId }: { eventId: string; userId: string }) {
-  const [isInterested, setIsInterested] = useState(false);
-  const [count, setCount] = useState(0);
-
-  useEffect(() => {
-    let mounted = true;
-    async function fetchStatus() {
-      // Get count
-      const { count: c, error: cErr } = await supabase
-        .from('event_interest')
-        .select('*', { count: 'exact', head: true })
-        .eq('event_id', eventId);
-      
-      if (cErr) {
-        console.error('Supabase error:', cErr.message, cErr.code, cErr.details);
-      } else if (mounted && c !== null) {
-        setCount(c);
-      }
-
-      // Check if user is interested
-      if (userId) {
-        const { data: interest, error: iErr } = await supabase
-          .from('event_interest')
-          .select('id')
-          .eq('event_id', eventId)
-          .eq('user_id', userId)
-          .maybeSingle();
-
-        if (iErr) {
-          console.error('Supabase error:', iErr.message, iErr.code, iErr.details);
-        } else if (mounted && interest) {
-          setIsInterested(true);
-        }
-      }
-    }
-    fetchStatus();
-    return () => { mounted = false; };
-  }, [eventId, userId]);
+function InterestButton({ eventId, userId, initialCount, initialInterested }: { eventId: string; userId: string; initialCount: number; initialInterested: boolean }) {
+  const [isInterested, setIsInterested] = useState(initialInterested);
+  const [count, setCount] = useState(initialCount);
 
   const handleToggle = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -97,73 +62,14 @@ function InterestButton({ eventId, userId }: { eventId: string; userId: string }
   );
 }
 
-export default function EventsPageClient({ userId }: { userId: string }) {
-  const [allEvents, setAllEvents] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+export default function EventsPageClient({ userId, initialData }: { userId: string, initialData: any }) {
+  const [allEvents, setAllEvents] = useState<any[]>(initialData?.initialEvents || []);
+  const [loading, setLoading] = useState(false);
   const [activeFilter, setActiveFilter] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
-  const [organizerMap, setOrganizerMap] = useState<Record<string, string>>({});
-
-
-  useEffect(() => {
-    let m = true;
-    
-    async function fetchEvents() {
-      const today = new Date().toISOString().split('T')[0];
-      const { data, error } = await supabase
-        .from('events')
-        .select(`
-          *,
-          clubs:club_id(name, initials, accent_color)
-        `)
-        .gte('event_date', today)
-        .order('event_date', { ascending: true });
-
-      if (error) {
-        console.error("Events fetch error:", error);
-      } else if (m && data) {
-        const mappedData = data.map(e => ({
-          ...e,
-          event_date: e.event_date || e.created_at,
-          location: e.location || e.metadata?.location || e.metadata?.event_location || null,
-          start_time: e.metadata?.event_time || e.metadata?.start_time || null,
-          description: e.body || e.content || e.description || e.metadata?.event_desc || "",
-          event_tags: (e.metadata?.tags || e.metadata?.event_tags || []).map((t: string) => ({ tag: t })),
-          form_url: e.metadata?.registration_url || e.metadata?.event_url || e.form_url || null,
-          rsvp_count: e.metadata?.rsvp_count || e.rsvp_count || 0,
-          organizer: e.metadata?.organizer || e.organizer || null
-        })).sort((a, b) => new Date(a.event_date).getTime() - new Date(b.event_date).getTime());
-        setAllEvents(mappedData);
-
-        const orgMap: Record<string, string> = {};
-        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-        const orgIds = mappedData.map(e => e.organizer).filter(o => o && uuidRegex.test(o));
-        if (orgIds.length > 0) {
-          const uniqueIds = Array.from(new Set(orgIds));
-          supabase.from('users').select('id, full_name').in('id', uniqueIds).then(({ data: users }) => {
-            if (users && m) {
-              users.forEach((u: any) => {
-                if (u.full_name) orgMap[u.id] = u.full_name;
-              });
-              setOrganizerMap(prev => ({ ...prev, ...orgMap }));
-            }
-          });
-        }
-      }
-      if (m) setLoading(false);
-    }
-
-    fetchEvents();
-
-    const channel = supabase.channel('realtime:events')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'events' }, payload => {
-        fetchEvents();
-      })
-      .subscribe();
-
-    return () => { m = false; supabase.removeChannel(channel); };
-  }, [userId]);
+  const [organizerMap, setOrganizerMap] = useState<Record<string, string>>(initialData?.initialOrganizerMap || {});
+  const [interestedIds, setInterestedIds] = useState<Set<string>>(new Set(initialData?.initialInterestedIds || []));
 
   const handleShare = (ev: any) => {
     const url = `${window.location.origin}/events?id=${ev.id}`;
@@ -441,7 +347,7 @@ export default function EventsPageClient({ userId }: { userId: string }) {
                         </div>
                       </div>
                       <div className="fe-actions">
-                        <InterestButton eventId={featuredEvent.id} userId={userId} />
+                        <InterestButton eventId={featuredEvent.id} userId={userId} initialInterested={interestedIds.has(featuredEvent.id)} initialCount={featuredEvent.rsvp_count || 0} />
                         <button className="btn-share" onClick={() => handleShare(featuredEvent)}>Share</button>
                       </div>
                       {featuredEvent.rsvp_count > 0 && (
@@ -506,7 +412,7 @@ export default function EventsPageClient({ userId }: { userId: string }) {
                           </div>
                           
                           <div className="ec-right">
-                            <InterestButton eventId={ev.id} userId={userId} />
+                            <InterestButton eventId={ev.id} userId={userId} initialInterested={interestedIds.has(ev.id)} initialCount={ev.rsvp_count || 0} />
                             <button className="btn-share-mini" onClick={(e) => { e.stopPropagation(); handleShare(ev); }}>
                               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
                               Share

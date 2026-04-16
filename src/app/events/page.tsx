@@ -12,10 +12,13 @@ export default async function EventsPage() {
     redirect("/login")
   }
 
+  const { getEventsData } = await import('@/lib/server-fetchers');
+  const eventsData = await getEventsData(user.id);
+
   return (
     <>
       <TopNav />
-      <EventsPageClient userId={user.id} />
+      <EventsPageClient userId={user.id} initialData={eventsData} />
     </>
   )
 }

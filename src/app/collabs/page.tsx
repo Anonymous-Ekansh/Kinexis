@@ -12,10 +12,13 @@ export default async function CollabsPage() {
     redirect("/login")
   }
 
+  const { getCollabsData } = await import('@/lib/server-fetchers');
+  const collabsData = await getCollabsData();
+
   return (
     <>
       <TopNav />
-      <CollabsPageClient userId={user.id} />
+      <CollabsPageClient userId={user.id} initialData={collabsData} />
     </>
   )
 }

@@ -12,10 +12,13 @@ export default async function FeedPage() {
     redirect("/login")
   }
 
+  const { getFeedData } = await import('@/lib/server-fetchers');
+  const feedData = await getFeedData(user.id);
+
   return (
     <>
       <TopNav />
-      <FeedPageClient userId={user.id} />
+      <FeedPageClient userId={user.id} initialData={feedData} />
     </>
   )
 }

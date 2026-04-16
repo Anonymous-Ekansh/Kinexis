@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { fetchConversations, fetchRequests, acceptRequest, declineRequest, getOrCreateConversation, getLastMessage, getUnreadCount, getPresence, searchUsers, markMessagesRead } from "@/lib/messages/queries";
 import { subscribeToConversations, subscribeToRequests, subscribeToAllMessages, subscribeToSentRequests, unsubscribe } from "@/lib/messages/realtime";
 import RequestCard from "./RequestCard";
@@ -20,15 +20,16 @@ interface Props {
   onSelectRequest: (req: any) => void;
   onDraftRequest: (user: any) => void;
   refreshKey: number;
+  initialData?: any;
 }
 
-export default function MessagesSidebar({ userId, activeConvId, onSelectConversation, onSelectRequest, onDraftRequest, refreshKey }: Props) {
-  const [conversations, setConversations] = useState<any[]>([]);
-  const [requests, setRequests] = useState<any[]>([]);
-  const [sentRequests, setSentRequests] = useState<any[]>([]);
+export default function MessagesSidebar({ userId, activeConvId, onSelectConversation, onSelectRequest, onDraftRequest, refreshKey, initialData }: Props) {
+  const [conversations, setConversations] = useState<any[]>(initialData?.initialConversations || []);
+  const [requests, setRequests] = useState<any[]>(initialData?.initialRequests || []);
+  const [sentRequests, setSentRequests] = useState<any[]>(initialData?.initialSentRequests || []);
   const [searchQuery, setSearchQuery] = useState("");
   const [userResults, setUserResults] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'chats'|'requests'>('chats');
 
   /* ── Load conversations ── */
@@ -72,7 +73,18 @@ export default function MessagesSidebar({ userId, activeConvId, onSelectConversa
     } catch (e) { console.error(e); }
   }, [userId]);
 
-  useEffect(() => { loadConversations(); loadRequests(); loadSentRequests(); }, [loadConversations, loadRequests, loadSentRequests, refreshKey]);
+  const initialLoadDone = React.useRef(false);
+
+  useEffect(() => { 
+    if (!initialLoadDone.current) {
+        initialLoadDone.current = true;
+        // Skip first fetch because we have initialData
+        return;
+    }
+    loadConversations(); 
+    loadRequests(); 
+    loadSentRequests(); 
+  }, [loadConversations, loadRequests, loadSentRequests, refreshKey]);
 
   /* ── Realtime ── */
   useEffect(() => {

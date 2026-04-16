@@ -54,15 +54,15 @@ function renderStars(rating: number): string {
 }
 
 /* ── Main Component ── */
-export default function FeedPageClient({ userId }: { userId: string }) {
+export default function FeedPageClient({ userId, initialData }: { userId: string, initialData: any }) {
   /* State */
-  const [posts, setPosts] = useState<any[]>([]);
-  const [votes, setVotes] = useState<Record<string, { total: number; userVote: number }>>({});
-  const [loading, setLoading] = useState(true);
+  const [posts, setPosts] = useState<any[]>(initialData?.initialPosts || []);
+  const [votes, setVotes] = useState<Record<string, { total: number; userVote: number }>>(initialData?.initialVotes || {});
+  const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("All");
   const [sortBy, setSortBy] = useState("Top Upvoted");
   const [activeTag, setActiveTag] = useState<string | null>(null);
-  const [profile, setProfile] = useState<any>(null);
+  const [profile, setProfile] = useState<any>(initialData?.initialProfile || null);
 
   /* Modal */
   const [showModal, setShowModal] = useState(false);
@@ -85,133 +85,8 @@ export default function FeedPageClient({ userId }: { userId: string }) {
   const [commentLoading, setCommentLoading] = useState(false);
 
   /* Sidebar */
-  const [leaderboard, setLeaderboard] = useState<any[]>([]);
-  const [trendingTags, setTrendingTags] = useState<string[]>([]);
-
-  /* ── Fetch profile ── */
-  useEffect(() => {
-    supabase.from("users").select("id, full_name, stream, year, avatar_url").eq("id", userId).single().then(({ data }) => {
-      if (data) setProfile(data);
-    });
-  }, [userId]);
-
-  /* ── Fetch posts + votes ── */
-  const fetchPosts = useCallback(async () => {
-    const { data: postsData, error } = await supabase
-      .from("public_feed_posts")
-      .select("*")
-      .order("created_at", { ascending: false })
-      .limit(50);
-
-    if (error) {
-      console.error("Feed fetch error:", error);
-      setLoading(false);
-      return;
-    }
-
-    if (postsData) {
-      // Resolve author names for non-anonymous posts
-      const userIds = postsData.filter(p => !p.is_anonymous && p.user_id).map(p => p.user_id);
-      const uniqueUserIds = [...new Set(userIds)];
-      let authorMap: Record<string, any> = {};
-
-      if (uniqueUserIds.length > 0) {
-        const { data: users } = await supabase.from("users").select("id, full_name, stream, year, avatar_url").in("id", uniqueUserIds);
-        if (users) users.forEach(u => { authorMap[u.id] = u; });
-      }
-
-      const enriched = postsData.map(p => ({
-        ...p,
-        author: p.is_anonymous ? null : (p.user_id ? authorMap[p.user_id] : null),
-      }));
-      setPosts(enriched);
-
-      // Fetch votes for all posts
-      const postIds = enriched.map(p => p.id);
-      if (postIds.length > 0) {
-        const { data: votesData } = await supabase.from("feed_votes").select("post_id, user_id, vote").in("post_id", postIds);
-        const voteMap: Record<string, { total: number; userVote: number }> = {};
-        postIds.forEach(id => { voteMap[id] = { total: 0, userVote: 0 }; });
-        if (votesData) {
-          votesData.forEach((v: any) => {
-            if (!voteMap[v.post_id]) voteMap[v.post_id] = { total: 0, userVote: 0 };
-            voteMap[v.post_id].total += v.vote;
-            if (v.user_id === userId) voteMap[v.post_id].userVote = v.vote;
-          });
-        }
-        setVotes(voteMap);
-      }
-    }
-    setLoading(false);
-  }, [userId]);
-
-  /* ── Fetch leaderboard ── */
-  const fetchLeaderboard = useCallback(async () => {
-    // Top users by total upvotes received on their posts
-    const { data: allVotes } = await supabase.from("feed_votes").select("post_id, vote");
-    if (!allVotes) return;
-
-    // Get all posts to map post→author
-    const { data: allPosts } = await supabase.from("feed_posts").select("id, user_id");
-    if (!allPosts) return;
-
-    const postOwnerMap: Record<string, string> = {};
-    allPosts.forEach(p => { postOwnerMap[p.id] = p.user_id; });
-
-    const userScores: Record<string, number> = {};
-    allVotes.forEach((v: any) => {
-      const owner = postOwnerMap[v.post_id];
-      if (owner && v.vote === 1) {
-        userScores[owner] = (userScores[owner] || 0) + 1;
-      }
-    });
-
-    const sorted = Object.entries(userScores).sort((a, b) => b[1] - a[1]).slice(0, 10);
-    const topUserIds = sorted.map(([uid]) => uid);
-
-    if (topUserIds.length === 0) { setLeaderboard([]); return; }
-
-    const { data: users } = await supabase.from("users").select("id, full_name, stream, year").in("id", topUserIds);
-    const userMap: Record<string, any> = {};
-    if (users) users.forEach(u => { userMap[u.id] = u; });
-
-    const lb = sorted.map(([uid, score]) => ({ ...userMap[uid], score, id: uid })).filter(u => u.full_name);
-    setLeaderboard(lb);
-  }, []);
-
-  /* ── Fetch trending tags ── */
-  const fetchTrending = useCallback(async () => {
-    const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString();
-    const { data } = await supabase.from("feed_posts").select("tags").gte("created_at", weekAgo);
-    if (!data) return;
-
-    const freq: Record<string, number> = {};
-    data.forEach((p: any) => {
-      (p.tags || []).forEach((t: string) => { freq[t] = (freq[t] || 0) + 1; });
-    });
-    const top = Object.entries(freq).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([tag]) => tag);
-    setTrendingTags(top);
-  }, []);
-
-  /* ── Initial fetch ── */
-  useEffect(() => {
-    fetchPosts();
-    fetchLeaderboard();
-    fetchTrending();
-  }, [fetchPosts, fetchLeaderboard, fetchTrending]);
-
-  /* ── Realtime ── */
-  useEffect(() => {
-    const postChannel = supabase.channel("realtime:feed_posts")
-      .on("postgres_changes", { event: "*", schema: "public", table: "feed_posts" }, () => { fetchPosts(); fetchLeaderboard(); fetchTrending(); })
-      .subscribe();
-
-    const voteChannel = supabase.channel("realtime:feed_votes")
-      .on("postgres_changes", { event: "*", schema: "public", table: "feed_votes" }, () => { fetchPosts(); fetchLeaderboard(); })
-      .subscribe();
-
-    return () => { supabase.removeChannel(postChannel); supabase.removeChannel(voteChannel); };
-  }, [fetchPosts, fetchLeaderboard, fetchTrending]);
+  const [leaderboard, setLeaderboard] = useState<any[]>(initialData?.initialLeaderboard || []);
+  const [trendingTags, setTrendingTags] = useState<string[]>(initialData?.initialTrendingTags || []);
 
   /* ── Vote handler ── */
   const handleVote = async (postId: string, voteVal: number) => {
@@ -259,6 +134,14 @@ export default function FeedPageClient({ userId }: { userId: string }) {
     if (error) { alert("Failed: " + error.message); return; }
 
     const newPost = newPosts?.[0];
+
+    if (newPost) {
+      const enrichedNewPost = {
+        ...newPost,
+        author: formAnon ? null : profile
+      };
+      setPosts(prev => [enrichedNewPost, ...prev]);
+    }
 
     // Log activity
     logActivity({ userId, activityType: `post_${modalType === "professor_rating" ? "thread" : modalType}`, targetTitle: formTitle, targetId: newPost?.id, targetType: "post" });

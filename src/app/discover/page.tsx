@@ -14,10 +14,13 @@ export default async function DiscoverPage() {
     redirect('/login')
   }
 
+  const { getDiscoverData } = await import('@/lib/server-fetchers');
+  const discoverData = await getDiscoverData(user.id);
+
   return (
     <div className="disc-page">
       <TopNav />
-      <DiscoverClient />
+      <DiscoverClient initialData={discoverData} userId={user.id} />
       <footer className="disc-footer">
         <span className="disc-foot-l">© 2025 Kinexis</span>
         <span className="disc-foot-r">kinexis.in</span>

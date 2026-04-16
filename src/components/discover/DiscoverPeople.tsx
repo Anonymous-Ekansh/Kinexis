@@ -1,9 +1,7 @@
 "use client";
 
-import { useEffect, useState, useMemo, useRef } from "react";
-import { supabase } from "@/lib/supabase";
+import { useState, useMemo, useRef, useEffect } from "react";
 import ProfileCard from "./ProfileCard";
-import { useAuth } from "@/contexts/AuthContext";
 
 /* ── Helpers ── */
 const ACCENT_COLORS = ["var(--lime)", "var(--cyan)", "var(--purple)", "var(--coral)"];
@@ -48,109 +46,32 @@ function getInitials(name: string | null): string {
   return name.split(" ").map(w => w[0]).join("").toUpperCase().slice(0, 2);
 }
 
-function SkeletonCard() {
-  return (
-    <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 16, padding: 20, minHeight: 140 }}>
-      <div className="pf-skeleton" style={{ width: 40, height: 40, borderRadius: "50%", marginBottom: 10 }} />
-      <div className="pf-skeleton pf-skeleton-line" style={{ width: "70%", marginBottom: 8 }} />
-      <div className="pf-skeleton pf-skeleton-line-sm" style={{ width: "50%", marginBottom: 12 }} />
-      <div className="pf-skeleton" style={{ height: 24, width: "80%", borderRadius: 8 }} />
-    </div>
-  );
-}
-
-export default function DiscoverPeople() {
+export default function DiscoverPeople({ initialData, userId }: { initialData: any, userId: string }) {
   const feedRef = useRef<HTMLDivElement>(null);
-  const [people, setPeople] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const { user, loading: authLoading } = useAuth();
+  
+  const people = useMemo(() => {
+    if (!initialData?.initialTopUsers) return [];
+    return initialData.initialTopUsers.map((u: any, i: number) => ({
+      id: u.id,
+      initials: getInitials(u.full_name),
+      name: u.full_name || "Unnamed",
+      batch: `${u.stream ? u.stream.slice(0, 15) : "Student"} · ${u.year || ""}`,
+      vibe: u.currently_focused_on || "Exploring Kinexis",
+      vibeBg: VIBE_BGS[i % VIBE_BGS.length],
+      vibeColor: VIBE_COLORS[i % VIBE_COLORS.length],
+      tags: (u.interests || []).slice(0, 3),
+      allInterests: (u.interests || []) as string[],
+      accent: ACCENT_COLORS[i % ACCENT_COLORS.length],
+      upvotes: u.upvotes || 0,
+      followers: u.followers || 0,
+      fullName: (u.full_name || "").toLowerCase(),
+    }));
+  }, [initialData?.initialTopUsers]);
+
   const [searchQuery, setSearchQuery] = useState("");
-  const [userId, setUserId] = useState("");
   const [sortBy, setSortBy] = useState<"upvotes" | "followers" | "recent">("recent");
   const [activeFilter, setActiveFilter] = useState("All");
   const [showAllFilters, setShowAllFilters] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    (async () => {
-      if (authLoading) return;
-      try {
-        const uid = user?.id || "";
-        if (!cancelled) setUserId(uid);
-
-        const { data: users, error: usersErr } = await supabase
-          .from("users")
-          .select("id, full_name, stream, year, interests, currently_focused_on, avatar_url")
-          .neq("id", uid)
-          .order("created_at", { ascending: false })
-          .limit(50);
-
-        if (usersErr || !users) {
-          if (!cancelled) setLoading(false);
-          return;
-        }
-
-        const { data: allPosts } = await supabase
-          .from("feed_posts")
-          .select("id, user_id");
-
-        const { data: allVotes } = await supabase
-          .from("feed_votes")
-          .select("post_id, vote");
-
-        const userScores: Record<string, number> = {};
-        if (allPosts && allVotes) {
-          const postOwnerMap: Record<string, string> = {};
-          allPosts.forEach((p: any) => { postOwnerMap[p.id] = p.user_id; });
-
-          allVotes.forEach((v: any) => {
-            const owner = postOwnerMap[v.post_id];
-            if (owner && v.vote === 1) {
-              userScores[owner] = (userScores[owner] || 0) + 1;
-            }
-          });
-        }
-
-        const userIds = users.map(u => u.id);
-        const { data: followData } = await supabase
-          .from("follows")
-          .select("following_id")
-          .in("following_id", userIds);
-
-        const followerCounts: Record<string, number> = {};
-        if (followData) {
-          followData.forEach((f: any) => {
-            followerCounts[f.following_id] = (followerCounts[f.following_id] || 0) + 1;
-          });
-        }
-
-        const mapped = users.map((u: any, i: number) => ({
-          id: u.id,
-          initials: getInitials(u.full_name),
-          name: u.full_name || "Unnamed",
-          batch: `${u.stream ? u.stream.slice(0, 15) : "Student"} · ${u.year || ""}`,
-          vibe: u.currently_focused_on || "Exploring Kinexis",
-          vibeBg: VIBE_BGS[i % VIBE_BGS.length],
-          vibeColor: VIBE_COLORS[i % VIBE_COLORS.length],
-          tags: (u.interests || []).slice(0, 3),
-          allInterests: (u.interests || []) as string[],
-          accent: ACCENT_COLORS[i % ACCENT_COLORS.length],
-          upvotes: userScores[u.id] || 0,
-          followers: followerCounts[u.id] || 0,
-          fullName: (u.full_name || "").toLowerCase(),
-        }));
-
-        if (!cancelled) setPeople(mapped);
-      } catch (err) {
-        console.error("DiscoverPeople fetch error:", err);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-
-    return () => { cancelled = true; };
-  }, [user, authLoading]);
 
   // Filter + sort
   const displayPeople = useMemo(() => {
@@ -159,7 +80,7 @@ export default function DiscoverPeople() {
     // Interest filter
     if (activeFilter !== "All") {
       const q = activeFilter.toLowerCase();
-      list = list.filter(p =>
+      list = list.filter((p: any) =>
         p.allInterests.some((t: string) => t.toLowerCase().includes(q)) ||
         p.tags.some((t: string) => t.toLowerCase().includes(q)) ||
         p.vibe.toLowerCase().includes(q) ||
@@ -170,7 +91,7 @@ export default function DiscoverPeople() {
     // Search
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
-      list = list.filter(p =>
+      list = list.filter((p: any) =>
         p.fullName.includes(q) ||
         p.batch.toLowerCase().includes(q) ||
         p.tags.some((t: string) => t.toLowerCase().includes(q))
@@ -206,7 +127,7 @@ export default function DiscoverPeople() {
     );
     sections.forEach((s) => obs.observe(s));
     return () => obs.disconnect();
-  }, [loading]);
+  }, [displayPeople]);
 
   const visibleFilters = showAllFilters ? INTEREST_FILTERS : INTEREST_FILTERS.slice(0, 10);
 
@@ -216,7 +137,7 @@ export default function DiscoverPeople() {
       <div className="disc-topbar">
         <h1 className="disc-topbar-title">People</h1>
         <span style={{ fontSize: 13, color: "rgba(255,255,255,0.4)" }}>
-          {!loading && `${displayPeople.length} people`}
+          {`${displayPeople.length} people`}
         </span>
       </div>
 
@@ -310,11 +231,7 @@ export default function DiscoverPeople() {
 
       {/* People Grid */}
       <div className="disc-reveal visible">
-        {loading ? (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 14 }}>
-            {Array.from({ length: 9 }).map((_, i) => <SkeletonCard key={i} />)}
-          </div>
-        ) : displayPeople.length === 0 ? (
+        {displayPeople.length === 0 ? (
           <div style={{ textAlign: "center", padding: "60px 20px", color: "rgba(255,255,255,0.4)" }}>
             {searchQuery
               ? `No people found matching "${searchQuery}"`
@@ -324,7 +241,7 @@ export default function DiscoverPeople() {
           </div>
         ) : (
           <div className="disc-profiles-grid" style={{ gridTemplateColumns: "repeat(3, 1fr)" }}>
-            {displayPeople.map((p) => (
+            {displayPeople.map((p: any) => (
               <ProfileCard
                 key={p.id}
                 id={p.id}

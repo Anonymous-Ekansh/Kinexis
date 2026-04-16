@@ -35,16 +35,16 @@ const STATUS_MAP: Record<string, { icon: string; label: string; color: string }>
   closed: { icon: "🔴", label: "Team full", color: "var(--coral)" },
 };
 
-export default function CollabsPageClient({ userId }: { userId: string }) {
-  const [allCollabs, setAllCollabs] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+export default function CollabsPageClient({ userId, initialData }: { userId: string, initialData: any }) {
+  const [allCollabs, setAllCollabs] = useState<any[]>(initialData?.initialCollabs || []);
+  const [loading, setLoading] = useState(false);
   const [activeFilter, setActiveFilter] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState("Most Recent");
   const [showModal, setShowModal] = useState(false);
   const [offset, setOffset] = useState(0);
   const [hasMore, setHasMore] = useState(true);
-  const [stats, setStats] = useState({ total: 0, open: 0, involved: 0, thisWeek: 0 });
+  const [stats, setStats] = useState(initialData?.initialStats || { total: 0, open: 0, involved: 0, thisWeek: 0 });
 
   // Modal state
   const [formTitle, setFormTitle] = useState("");
@@ -98,10 +98,7 @@ export default function CollabsPageClient({ userId }: { userId: string }) {
     });
   }, []);
 
-  useEffect(() => {
-    fetchCollabs();
-    fetchStats();
-  }, [fetchCollabs, fetchStats]);
+  // Initial fetch removed since data comes from server
 
   const handleLoadMore = () => {
     const next = offset + 12;

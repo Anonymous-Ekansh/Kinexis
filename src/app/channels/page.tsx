@@ -15,10 +15,13 @@ export default async function ChannelsPage() {
     redirect("/login");
   }
 
+  const { getChannelsData } = await import('@/lib/server-fetchers');
+  const channelsData = await getChannelsData(user.id);
+
   return (
     <>
       <TopNav />
-      <ChannelsPageClient />
+      <ChannelsPageClient initialData={channelsData} userId={user.id} />
     </>
   );
 }

@@ -41,25 +41,33 @@ function fmtDate(d: string) { return new Date(d).toLocaleDateString("en-US", { m
 function formatEventDate(isoString: string) { const d = new Date(isoString); const dp = d.toLocaleDateString("en-US", { month: "long", day: "numeric" }); if (isoString.includes("T") && !isoString.endsWith("T00:00:00.000Z") && !isoString.endsWith("T00:00:00Z")) { return `${dp} · ${d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}`; } return dp; }
 function getBadgeStyle(type: string) { const t = type.toLowerCase(); if (t === "workshop") return { background: "rgba(34,211,238,0.1)", color: "#22D3EE", border: "1px solid rgba(34,211,238,0.22)" }; if (t === "hackathon") return { background: "rgba(251,113,133,0.1)", color: "#FB7185", border: "1px solid rgba(251,113,133,0.22)" }; if (t === "deadline") return { background: "rgba(158,240,26,0.1)", color: "#9EF01A", border: "1px solid rgba(158,240,26,0.22)" }; if (t === "talk") return { background: "rgba(167,139,250,0.1)", color: "#A78BFA", border: "1px solid rgba(167,139,250,0.22)" }; return { background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.6)", border: "1px solid transparent" }; }
 
-export default function ChannelsPageClient() {
+export default function ChannelsPageClient({ userId, initialData }: { userId: string, initialData: any }) {
   const router = useRouter();
-  const { user, loading: authLoading } = useAuth();
-  const [userId, setUserId] = useState<string | null>(null);
-  const [userRole, setUserRole] = useState<string>("user");
-  const [clubs, setClubs] = useState<SidebarClub[]>([]);
-  const [clubsLoading, setClubsLoading] = useState(true);
-  const [roleByClub, setRoleByClub] = useState<Record<string, string>>({});
-  const [activeId, setActiveId] = useState<string | null>(null);
-  const [posts, setPosts] = useState<Post[]>([]);
+  const [userRole, setUserRole] = useState<string>(initialData?.userRole || "user");
+  const [clubs, setClubs] = useState<SidebarClub[]>(initialData?.initialClubs || []);
+  const [clubsLoading, setClubsLoading] = useState(false);
+  const [roleByClub, setRoleByClub] = useState<Record<string, string>>(initialData?.initialRoleByClub || {});
+  const [activeId, setActiveId] = useState<string | null>(initialData?.initialActiveId || null);
+  const [posts, setPosts] = useState<Post[]>(initialData?.initialPosts || []);
   const [postsLoading, setPostsLoading] = useState(false);
-  const [emojiCounts, setEmojiCounts] = useState<EmojiCounts>({});
-  const [userReactions, setUserReactions] = useState<UserReactions>({});
-  const [events, setEvents] = useState<EventItem[]>([]);
-  const [leads, setLeads] = useState<LeadItem[]>([]);
+  const [emojiCounts, setEmojiCounts] = useState<EmojiCounts>(initialData?.initialEmojiCounts || {});
+  
+  const processedUserReactions = useMemo(() => {
+    if (!initialData?.initialUserReactions) return {};
+    const res: UserReactions = {};
+    Object.keys(initialData.initialUserReactions).forEach(k => {
+      res[k] = new Set(initialData.initialUserReactions[k]);
+    });
+    return res;
+  }, [initialData?.initialUserReactions]);
+  
+  const [userReactions, setUserReactions] = useState<UserReactions>(processedUserReactions);
+  const [events, setEvents] = useState<EventItem[]>(initialData?.initialEvents || []);
+  const [leads, setLeads] = useState<LeadItem[]>(initialData?.initialLeads || []);
   const [allMembers, setAllMembers] = useState<MemberItem[]>([]);
   const [membersLoading, setMembersLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<TabId>("Posts");
-  const [followingByClub, setFollowingByClub] = useState<Record<string, boolean>>({});
+  const [followingByClub, setFollowingByClub] = useState<Record<string, boolean>>(initialData?.initialFollowingByClub || {});
   const [notifyByClub, setNotifyByClub] = useState<Record<string, boolean>>({});
   const [pinnedExpanded, setPinnedExpanded] = useState(false);
   const [isNarrow, setIsNarrow] = useState(false);
@@ -102,32 +110,23 @@ export default function ChannelsPageClient() {
 
   useEffect(() => { const mq = window.matchMedia("(max-width: 767px)"); const a = () => { setIsNarrow(mq.matches); if (!mq.matches) setMobileFeed(false); }; a(); mq.addEventListener("change", a); return () => mq.removeEventListener("change", a); }, []);
 
-  // === AUTH + SIDEBAR ===
-  useEffect(() => { 
-    if (authLoading) return;
-    if (!user) { router.push("/login"); return; }
-    
-    let m = true; 
-    async function init() {
-      if (m && user) setUserId(user.id);
-      const { data: currentUser } = await supabase.from("users").select("role").eq("id", user?.id).single();
-      if (m) setUserRole(currentUser?.role || "user");
-      const { data: memberRows } = await supabase.from("club_members").select("club_id, role").eq("user_id", user?.id);
-    if (!m || !memberRows || memberRows.length === 0) { if (m) { setClubs([]); setClubsLoading(false); } return; }
-    const clubIds = memberRows.map((r: any) => r.club_id);
-    const { data: clubsData } = await supabase.from("clubs").select("*").in("id", clubIds);
-    if (!m || !clubsData) { if (m) setClubsLoading(false); return; }
-    const rm: Record<string, string> = {}; for (const r of memberRows) rm[r.club_id] = r.role || "follower";
-    const mapped: SidebarClub[] = []; const roles: Record<string, string> = {}; const fs: Record<string, boolean> = {};
-    for (const c of clubsData) { const accent = (c.accent_color || "lime") as ClubAccent; const role = rm[c.id] || "follower";
-      mapped.push({ id: c.id, name: c.name || "", initials: c.initials || getInitials(c.name || ""), accent, description: c.description || "", follower_count: c.follower_count || 0, pinned_message: c.pinned_message || null, category: c.category || "", type: c.type || "", tags: c.tags || [], role });
-      roles[c.id] = role; fs[c.id] = true; }
-    if (m) { setClubs(mapped); setRoleByClub(roles); setFollowingByClub(fs); setClubsLoading(false); if (mapped.length > 0 && !activeId) { setActiveId(mapped[0].id); setReadIds(new Set([mapped[0].id])); setLastVisited(mapped[0].id); } }
-  } init(); return () => { m = false; }; // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, authLoading]);
+  // Initialize read IDs and last visited for initial active club on mount
+  useEffect(() => {
+    if (activeId && !readIds.has(activeId)) {
+      setReadIds(new Set([activeId]));
+      setLastVisited(activeId);
+    }
+  }, []);
+
+  const initialActiveIdRef = useRef(initialData?.initialActiveId);
+  const initialLoadedRef = useRef(false);
 
   // === POSTS ===
   useEffect(() => { if (!activeId) return; let m = true; async function f() {
+    if (!initialLoadedRef.current && activeId === initialActiveIdRef.current) {
+        initialLoadedRef.current = true;
+        return;
+    }
     setPostsLoading(true);
     const { data: pd } = await supabase.from("channel_posts").select("*").eq("club_id", activeId).order("created_at", { ascending: false });
     if (!m) return; if (!pd) { setPosts([]); setPostsLoading(false); return; }
@@ -147,8 +146,13 @@ export default function ChannelsPageClient() {
   } f(); return () => { m = false; }; }, [activeId, userId]);
 
   // === RIGHT PANEL ===
+  const initialRpLoadedRef = useRef(false);
   useEffect(() => { if (!activeId) return; let m = true; const club = clubs.find(c => c.id === activeId);
     async function f() {
+      if (!initialRpLoadedRef.current && activeId === initialActiveIdRef.current) {
+        initialRpLoadedRef.current = true;
+        return;
+      }
       const { data: ed } = await supabase.from("channel_posts").select("id, title, metadata, created_at").eq("club_id", activeId).eq("post_type", "event").gte("metadata->>event_date", new Date().toISOString().split("T")[0]).order("created_at", { ascending: false }).limit(2);
       if (m && ed) setEvents(ed.map((e: any) => ({ id: e.id, title: e.title, metadata: e.metadata || {}, created_at: e.created_at })));
       const { data: mr } = await supabase.from("club_members").select("user_id, role").eq("club_id", activeId).eq("role", "moderator");

@@ -1,9 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { supabase } from "@/lib/supabase";
+import { useState } from "react";
 import Link from "next/link";
-import { useAuth } from "@/contexts/AuthContext";
 
 const SIDEBAR_LINKS = [
   { id: "foryou", icon: "◉", label: "For You", badge: "12 new" },
@@ -21,62 +19,29 @@ function timeAgo(dateStr: string) {
   return `${days} days ago`;
 }
 
-export default function DiscoverSidebar({ activeSection = "foryou", onSectionChange }: { activeSection?: string; onSectionChange?: (id: string) => void }) {
+function formatActivityDescription(act: any): string {
+  if (act.description) return act.description;
+  const targetName = act.metadata?.target_name || act.title || "something";
+  const actorName = act.users?.full_name || "Someone";
+  switch (act.type) {
+    case 'follow': return `${actorName} followed you`;
+    case 'event_rsvp': return `${actorName} RSVP'd to ${targetName}`;
+    case 'new_post': return `${actorName} posted in ${targetName}`;
+    case 'club_join': return `${actorName} joined ${targetName}`;
+    default: return `${actorName} interacted with ${targetName}`;
+  }
+}
+
+interface Props {
+  activeSection?: string;
+  onSectionChange?: (id: string) => void;
+  userId?: string;
+  initialActivity?: any[];
+}
+
+export default function DiscoverSidebar({ activeSection = "foryou", onSectionChange, userId, initialActivity = [] }: Props) {
   const [activeLink, setActiveLink] = useState(activeSection);
-  const { user, loading: authLoading } = useAuth();
-
-  const [activity, setActivity] = useState<any[]>([]);
-  const [loadingActivity, setLoadingActivity] = useState(true);
-  const [profileId, setProfileId] = useState<string | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    let channel1: any = null;
-    let channel2: any = null;
-    let fetchFn: (() => void) | null = null;
-
-    (async () => {
-      if (authLoading) return;
-      try {
-        const currentUserId = user?.id;
-        if (!currentUserId) { setLoadingActivity(false); return; }
-        if (!cancelled) setProfileId(currentUserId);
-
-        const fetchActivity = async () => {
-          console.log('Fetching activity in DiscoverSidebar for user:', currentUserId);
-          const { data, error } = await supabase.rpc('get_user_activity', { p_user_id: currentUserId });
-          console.log('RPC get_user_activity response:', { data, error });
-          if (!error && data && !cancelled) {
-             setActivity((data as any[]).slice(0, 5));
-          }
-        };
-        fetchFn = fetchActivity;
-
-        await fetchActivity();
-        window.addEventListener('activityUpdated', fetchActivity);
-
-        channel1 = supabase
-          .channel('disc-act-follows')
-          .on('postgres_changes', { event: '*', schema: 'public', table: 'follows' }, fetchActivity)
-          .subscribe();
-        channel2 = supabase
-          .channel('disc-act-interests')
-          .on('postgres_changes', { event: '*', schema: 'public', table: 'event_interest' }, fetchActivity)
-          .subscribe();
-
-      } catch {
-        // Keep fallback
-      } finally {
-        if (!cancelled) setLoadingActivity(false);
-      }
-    })();
-    return () => { 
-      cancelled = true; 
-      if (channel1) supabase.removeChannel(channel1); 
-      if (channel2) supabase.removeChannel(channel2);
-      if (fetchFn) window.removeEventListener('activityUpdated', fetchFn);
-    };
-  }, [user, authLoading]);
+  const activity = (initialActivity || []).slice(0, 5);
 
   return (
     <aside className="disc-sidebar">
@@ -101,22 +66,12 @@ export default function DiscoverSidebar({ activeSection = "foryou", onSectionCha
       {/* Activity */}
       <div className="disc-sb-label">ACTIVITY</div>
       <div className="disc-sb-activity">
-        {loadingActivity ? (
-          Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="disc-sb-act-item">
-              <div className="pf-skeleton" style={{ width: 28, height: 28, borderRadius: 8, flexShrink: 0 }} />
-              <div style={{ flex: 1 }}>
-                <div className="pf-skeleton pf-skeleton-line" style={{ width: "80%", marginBottom: 4 }} />
-                <div className="pf-skeleton pf-skeleton-line-sm" style={{ width: "40%" }} />
-              </div>
-            </div>
-          ))
-        ) : activity.length > 0 ? (
-          activity.map((a, i) => (
-            <div key={i} className="disc-sb-act-item">
+        {activity.length > 0 ? (
+          activity.map((a: any, i: number) => (
+            <div key={a.id || i} className="disc-sb-act-item">
               <div className="disc-sb-act-icon" style={{ background: "rgba(158,240,26,.12)" }}>⚡</div>
               <div>
-                <div className="disc-sb-act-text">{a.description}</div>
+                <div className="disc-sb-act-text">{formatActivityDescription(a)}</div>
                 <div className="disc-sb-act-time">{timeAgo(a.created_at)}</div>
               </div>
             </div>
@@ -131,8 +86,8 @@ export default function DiscoverSidebar({ activeSection = "foryou", onSectionCha
       {/* My Campus */}
       <div className="disc-sb-label">MY CAMPUS</div>
       <div className="disc-sb-links">
-        {profileId ? (
-          <Link href={`/profile/${profileId}`} prefetch={false} className="disc-sb-link" style={{ textDecoration: "none" }}>
+        {userId ? (
+          <Link href={`/profile/${userId}`} prefetch={false} className="disc-sb-link" style={{ textDecoration: "none" }}>
             <span className="disc-sb-link-icon">◌</span> My Profile
           </Link>
         ) : (

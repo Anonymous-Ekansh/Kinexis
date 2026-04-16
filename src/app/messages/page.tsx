@@ -12,11 +12,14 @@ export default async function MessagesPage() {
     redirect("/login")
   }
 
+  const { getMessagesData } = await import('@/lib/server-fetchers')
+  const messagesData = await getMessagesData(user.id)
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
       <TopNav />
       <div style={{ flex: 1, overflow: 'hidden' }}>
-        <MessagesPageClient userId={user.id} />
+        <MessagesPageClient userId={user.id} initialData={messagesData} />
       </div>
     </div>
   )

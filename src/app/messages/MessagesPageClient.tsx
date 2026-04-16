@@ -8,7 +8,7 @@ import ChatPanel from "@/components/messages/ChatPanel";
 import RequestPanel from "@/components/messages/RequestPanel";
 import "./messages.css";
 
-export default function MessagesPageClient({ userId }: { userId: string }) {
+export default function MessagesPageClient({ userId, initialData }: { userId: string, initialData: any }) {
   const [activeConv, setActiveConv] = useState<any>(null);
   const [activeRequest, setActiveRequest] = useState<any>(null);
   const [draftUser, setDraftUser] = useState<any>(null);
@@ -92,6 +92,7 @@ export default function MessagesPageClient({ userId }: { userId: string }) {
         onSelectRequest={handleSelectRequest}
         onDraftRequest={handleDraftRequest}
         refreshKey={refreshKey}
+        initialData={initialData}
       />
       {activeConv ? (
         <ChatPanel
