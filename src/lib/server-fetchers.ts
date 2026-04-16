@@ -251,8 +251,8 @@ export async function getDiscoverData(userId: string) {
   const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString();
   const todayISO = new Date().toISOString().split("T")[0];
 
-  const p_me = supabase.from("users").select("interests").eq("id", userId).single();
-  const p_users = supabase.from("users").select("id, full_name, stream, year, interests, currently_focused_on, avatar_url, follower_count, created_at").neq("id", userId).order("created_at", { ascending: false }).limit(50);
+  const p_me = supabase.from("users").select("*").eq("id", userId).single();
+  const p_users = supabase.from("users").select("*").neq("id", userId).limit(50);
   const p_votes = supabase.from("feed_votes").select("post_id, vote");
   const p_posts = supabase.from("feed_posts").select("id, user_id");
   const p_collabs = supabase.from("collabs").select("id, title, category, description, looking_for, tags, spots_total, spots_filled, status, author:author_id(full_name)").eq("status", "open").order("created_at", { ascending: false }).limit(20);
@@ -264,6 +264,10 @@ export async function getDiscoverData(userId: string) {
   const [res_me, res_users, res_votes, res_posts, res_collabs, res_events, res_clubs, res_trending, res_activity] = await Promise.all([
     p_me, p_users, p_votes, p_posts, p_collabs, p_events, p_clubs, p_trending, p_activity
   ]);
+
+  if (res_users.error) {
+    console.error("[getDiscoverData] Users query error:", res_users.error.message);
+  }
 
   const allUsers = res_users.data || [];
   
