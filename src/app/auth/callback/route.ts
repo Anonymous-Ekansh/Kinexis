@@ -31,11 +31,11 @@ export async function GET(request: Request) {
     if (user && !error) {
       const { data: profile } = await supabase
         .from('users')
-        .select('id, stream')
+        .select('id')
         .eq('id', user.id)
         .single()
         
-      if (profile && profile.stream) {
+      if (profile) {
         return NextResponse.redirect(`${origin}/discover`)
       }
       return NextResponse.redirect(`${origin}/onboarding`)

@@ -8,18 +8,21 @@ interface AuthContextType {
   user: User | null;
   session: Session | null;
   loading: boolean;
+  hasProfile: boolean | null;
 }
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
   session: null,
   loading: true,
+  hasProfile: null,
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [hasProfile, setHasProfile] = useState<boolean | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -29,6 +32,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (mounted) {
         setSession(data.session);
         setUser(data.session?.user ?? null);
+        
+        if (data.session?.user) {
+          const { data: profile } = await supabase
+            .from('users')
+            .select('id')
+            .eq('id', data.session.user.id)
+            .single();
+          setHasProfile(!!profile);
+        } else {
+          setHasProfile(false);
+        }
+        
         setLoading(false);
       }
     }
@@ -36,10 +51,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     getInitialSession();
 
     const { data: authListener } = supabase.auth.onAuthStateChange(
-      (event, newSession) => {
+      async (event, newSession) => {
         if (mounted) {
           setSession(newSession);
           setUser(newSession?.user ?? null);
+          
+          if (newSession?.user) {
+            const { data: profile } = await supabase
+              .from('users')
+              .select('id')
+              .eq('id', newSession.user.id)
+              .single();
+            setHasProfile(!!profile);
+          } else {
+            setHasProfile(false);
+          }
+          
           setLoading(false);
         }
       }
@@ -52,7 +79,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, session, loading }}>
+    <AuthContext.Provider value={{ user, session, loading, hasProfile }}>
       {children}
     </AuthContext.Provider>
   );

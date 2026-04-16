@@ -1,15 +1,23 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function OnboardingPage() {
   const router = useRouter();
+  const { user, loading: authLoading, hasProfile } = useAuth();
   
   const [step, setStep] = useState<number | 'finish'>(1);
   const [loading, setLoading] = useState(false);
   const [globalError, setGlobalError] = useState("");
+
+  useEffect(() => {
+    if (!authLoading && hasProfile === true) {
+      router.push("/discover");
+    }
+  }, [hasProfile, authLoading, router]);
 
   const [name, setName] = useState("");
   const [stream, setStream] = useState("");
@@ -124,7 +132,6 @@ export default function OnboardingPage() {
     setLoading(true);
     setGlobalError("");
     try {
-      const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         throw new Error("You must be logged in to complete onboarding.");
       }
@@ -619,7 +626,7 @@ export default function OnboardingPage() {
               <div className="f-av" style={{background: 'var(--coral)', color: '#fff'}}>SM</div>
               <div className="f-av" style={{background: 'var(--lime)'}}>+</div>
             </div>
-            <button className="btn-primary" style={{width: '100%', fontSize: '16px'}} onClick={() => router.push('/discover')}>
+            <button className="btn-primary" style={{width: '100%', fontSize: '16px'}} onClick={() => window.location.href = '/discover'}>
               Start exploring people &rarr;
             </button>
           </div>

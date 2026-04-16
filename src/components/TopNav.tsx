@@ -37,11 +37,17 @@ function getInitials(name: string | null): string {
 export default function TopNav() {
   const router = useRouter();
   const pathname = usePathname();
-  const { user } = useAuth();
+  const { user, loading: authLoading, hasProfile } = useAuth();
   const [profile, setProfile] = useState<any>(null);
   const [ddOpen, setDdOpen] = useState(false);
   const [networkOpen, setNetworkOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+
+  useEffect(() => {
+    if (!authLoading && user && hasProfile === false && pathname !== "/onboarding") {
+      router.push("/onboarding");
+    }
+  }, [user, hasProfile, authLoading, router, pathname]);
 
   useEffect(() => {
     if (!user) return;
