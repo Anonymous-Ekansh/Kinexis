@@ -46,7 +46,7 @@ function getInitials(name: string | null): string {
   return name.split(" ").map(w => w[0]).join("").toUpperCase().slice(0, 2);
 }
 
-export default function DiscoverPeople({ initialData, userId }: { initialData: any, userId: string }) {
+export default function DiscoverPeople({ initialData, userId, initialSearchQuery = "" }: { initialData: any, userId: string, initialSearchQuery?: string }) {
   const feedRef = useRef<HTMLDivElement>(null);
   
   const people = useMemo(() => {
@@ -68,7 +68,14 @@ export default function DiscoverPeople({ initialData, userId }: { initialData: a
     }));
   }, [initialData?.initialTopUsers]);
 
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState(initialSearchQuery);
+
+  // Sync initialSearchQuery when it changes (e.g. navigating from DiscoverFeed search)
+  useEffect(() => {
+    if (initialSearchQuery) {
+      setSearchQuery(initialSearchQuery);
+    }
+  }, [initialSearchQuery]);
   const [sortBy, setSortBy] = useState<"upvotes" | "followers" | "recent">("recent");
   const [activeFilter, setActiveFilter] = useState("All");
   const [showAllFilters, setShowAllFilters] = useState(false);

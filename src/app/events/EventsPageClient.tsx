@@ -365,7 +365,7 @@ export default function EventsPageClient({ userId, initialData }: { userId: stri
                 </>
               )}
 
-              {console.log("Filtered upcoming list length:", upcomingList.length)}
+
               {allEvents.length > 1 && (
                 <>
                   <div className="section-label">ALL EVENTS</div>

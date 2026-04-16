@@ -1,15 +1,30 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef, use } from "react";
-import { useRouter, useParams } from "next/navigation";
+import { useEffect, useState, useCallback, useRef } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { logActivity } from "@/lib/logActivity";
-import TopNav from "@/components/TopNav";
-import { useAuth } from "@/contexts/AuthContext";
 import CropModal from "@/components/profile/CropModal";
 import NetworkPanel from "@/components/profile/NetworkPanel";
 import "../profile.css";
+
+interface ProfilePageClientProps {
+  profileId: string;
+  viewerId: string | null;
+  initialData: {
+    initialProfile: any;
+    initialProjects: any[];
+    initialActivities: any[];
+    initialCollabs: any[];
+    initialFollowersCount: number;
+    initialFollowingCount: number;
+    initialSocialLinks: any[];
+    initialIsFollowing: boolean;
+    initialSimilarPeople: any[];
+    isOwnProfile: boolean;
+  };
+}
 
 /* ═══════════════════════════════════════════
    TYPES
@@ -64,29 +79,7 @@ interface SocialLink {
   label: string | null;
 }
 
-/* ═══════════════════════════════════════════
-   LOGO SVG
-   ═══════════════════════════════════════════ */
 
-function LogoSVG() {
-  return (
-    <svg width={180} height={38} viewBox="0 15 420 70" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <g transform="translate(18,18) scale(0.38)">
-        <circle cx="36" cy="20" r="5.5" fill="#9EF01A" />
-        <circle cx="36" cy="60" r="7.5" fill="#9EF01A" />
-        <circle cx="36" cy="100" r="5.5" fill="#9EF01A" />
-        <line x1="36" y1="25.5" x2="36" y2="52.5" stroke="#9EF01A" strokeWidth="4.5" strokeLinecap="round" />
-        <line x1="36" y1="67.5" x2="36" y2="94.5" stroke="#9EF01A" strokeWidth="4.5" strokeLinecap="round" />
-        <circle cx="92" cy="20" r="5.5" fill="#9EF01A" />
-        <path d="M43 53 Q60 36 87 23" stroke="#9EF01A" strokeWidth="4.5" strokeLinecap="round" fill="none" />
-        <circle cx="92" cy="100" r="5.5" fill="#9EF01A" />
-        <path d="M43 67 Q60 84 87 97" stroke="#9EF01A" strokeWidth="4.5" strokeLinecap="round" fill="none" />
-      </g>
-      <line x1="65" y1="22" x2="65" y2="78" stroke="rgba(255,255,255,0.07)" strokeWidth="1" />
-      <text x="76" y="58" fontFamily="'Syne','Inter',sans-serif" fontSize="42" fontWeight="800" fill="#FFFFFF" letterSpacing="-1.5">kinexis</text>
-    </svg>
-  );
-}
 
 const LOOKING_FOR_OPTIONS = [
   "Build something", "Hackathon team", "Startup idea", "Creative projects",
@@ -122,63 +115,27 @@ function activityTimeAgo(dateStr: string): string {
   return `${days} days ago`;
 }
 
-/* ═══════════════════════════════════════════
-   SKELETON LOADING
-   ═══════════════════════════════════════════ */
-function SkeletonPage() {
-  return (
-    <div className="profile-page">
-      <div className="pf-nav">
-        <LogoSVG />
-        <div className="pf-nav-links"><span className="pf-skeleton" style={{ width: 50, height: 12, display: "inline-block" }} /></div>
-        <div className="pf-nav-r"><span className="pf-skeleton" style={{ width: 34, height: 34, borderRadius: 9, display: "inline-block" }} /></div>
-      </div>
-      <div className="pf-banner"><div className="pf-banner-grid" /><div className="pf-banner-glow-l" /><div className="pf-banner-glow-r" /></div>
-      <div className="pf-outer">
-        <div className="pf-avatar-row" style={{ marginTop: -42, marginBottom: 20 }}>
-          <div className="pf-skeleton pf-skeleton-avatar" />
-        </div>
-        <div className="pf-body">
-          <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 16, padding: 22 }}>
-            <div className="pf-skeleton pf-skeleton-line" style={{ width: "50%" }} />
-            <div className="pf-skeleton pf-skeleton-line-sm" />
-            <div className="pf-skeleton pf-skeleton-line" style={{ width: "80%", marginTop: 16 }} />
-          </div>
-          <div>
-            <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 16, padding: 22, marginBottom: 14 }}>
-              <div className="pf-skeleton pf-skeleton-line" style={{ width: "30%" }} />
-              <div className="pf-skeleton" style={{ height: 60, borderRadius: 11, marginTop: 12 }} />
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
+
 
 /* ═══════════════════════════════════════════
    MAIN COMPONENT
    ═══════════════════════════════════════════ */
-export default function ProfilePage() {
+export default function ProfilePageClient({ profileId, viewerId, initialData }: ProfilePageClientProps) {
   const router = useRouter();
-  const params = useParams();
-  const { user, loading: authLoading } = useAuth();
-  const profileId = params?.id as string;
+  const loggedInUserId = viewerId;
+  const isOwnProfile = initialData.isOwnProfile;
 
-  // Core Data State
-  const [loading, setLoading] = useState(true);
-  const [loggedInUserId, setLoggedInUserId] = useState<string | null>(null);
-  const [isOwnProfile, setIsOwnProfile] = useState(false);
-  const [isFollowing, setIsFollowing] = useState(false);
+  // Core Data State (initialized from server data)
+  const [isFollowing, setIsFollowing] = useState(initialData.initialIsFollowing);
   const [followLoading, setFollowLoading] = useState(false);
   const [isHoveringFollow, setIsHoveringFollow] = useState(false);
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [userCollabs, setUserCollabs] = useState<any[]>([]);
-  const [activities, setActivities] = useState<ActivityItem[]>([]);
-  const [followersCount, setFollowersCount] = useState(0);
-  const [followingCount, setFollowingCount] = useState(0);
-  const [socialLinks, setSocialLinks] = useState<SocialLink[]>([]);
+  const [profile, setProfile] = useState<Profile | null>(initialData.initialProfile as Profile | null);
+  const [projects, setProjects] = useState<Project[]>(initialData.initialProjects as Project[]);
+  const [userCollabs, setUserCollabs] = useState<any[]>(initialData.initialCollabs);
+  const [activities, setActivities] = useState<ActivityItem[]>(initialData.initialActivities as ActivityItem[]);
+  const [followersCount, setFollowersCount] = useState(initialData.initialFollowersCount);
+  const [followingCount, setFollowingCount] = useState(initialData.initialFollowingCount);
+  const [socialLinks, setSocialLinks] = useState<SocialLink[]>(initialData.initialSocialLinks as SocialLink[]);
 
   // UI State
   const [toast, setToast] = useState<{ msg: string; type: "success" | "error" } | null>(null);
@@ -197,7 +154,6 @@ export default function ProfilePage() {
   const [coverRemoveConfirming, setCoverRemoveConfirming] = useState(false);
 
   const [isAdjustingCover, setIsAdjustingCover] = useState(false);
-  const [coverPosition, setCoverPosition] = useState<number>(50);
 
   const [confirmRemoveAvatar, setConfirmRemoveAvatar] = useState(false);
   const [confirmRemoveCover, setConfirmRemoveCover] = useState(false);
@@ -236,7 +192,11 @@ export default function ProfilePage() {
     id: string; full_name: string; stream: string | null;
     interests: string[]; clubs: string[]; avatar_url: string | null;
     sharedTags: string[];
-  }[]>([]);
+  }[]>(initialData.initialSimilarPeople);
+
+  // Cover position from profile
+  const initialCoverPos = (initialData.initialProfile as any)?.cover_position;
+  const [coverPosition, setCoverPosition] = useState<number>(initialCoverPos != null ? initialCoverPos : 50);
 
   /* Scroll reveal */
   useEffect(() => {
@@ -247,7 +207,7 @@ export default function ProfilePage() {
     }, { threshold: 0.05 });
     document.querySelectorAll(".pf-reveal").forEach(el => io.observe(el));
     return () => io.disconnect();
-  }, [loading]);
+  }, []);
 
   const showToast = useCallback((msg: string, type: "success" | "error") => {
     if (toastTimer.current) clearTimeout(toastTimer.current);
@@ -255,104 +215,7 @@ export default function ProfilePage() {
     toastTimer.current = setTimeout(() => setToast(null), 2000);
   }, []);
 
-  /* ── INITIAL FETCH ── */
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      if (authLoading) return;
-      if (cancelled) return;
-      
-      const currentLoggedInId = user?.id || null;
-      setLoggedInUserId(currentLoggedInId);
-      
-      const own = currentLoggedInId === profileId;
-      setIsOwnProfile(own);
 
-      if (!profileId) return;
-
-      // Fetch Profile
-      const { data: prof } = await supabase.from("users").select("*").eq("id", profileId).single();
-      if (!prof && !cancelled) {
-         setLoading(false);
-         return; 
-      }
-      if (prof && !cancelled) {
-        setProfile(prof as Profile);
-        if (prof.cover_position != null) setCoverPosition(prof.cover_position);
-      }
-
-      // Fetch Projects
-      const { data: projs } = await supabase.from("projects").select("*").eq("user_id", profileId).order('created_at', { ascending: false });
-      if (projs && !cancelled) setProjects(projs);
-
-      // Fetch Activity
-      console.log('Fetching activity in ProfilePage (initial) for user:', profileId);
-      const { data: acts, error: actsErr } = await supabase.rpc('get_user_activity', { p_user_id: profileId });
-      console.log('RPC get_user_activity response (initial):', { data: acts, error: actsErr });
-      if (acts && !cancelled) setActivities((acts as any[]).slice(0, 5) as ActivityItem[]);
-
-      // Mark as read on own profile
-      if (own && currentLoggedInId) {
-        supabase.from("activity").update({ is_read: true }).eq("user_id", currentLoggedInId).eq("is_read", false).then(() => {});
-      }
-
-      // Fetch User Collabs
-      const { data: collabsData } = await supabase
-        .from("collabs")
-        .select("*")
-        .eq("author_id", profileId)
-        .order("created_at", { ascending: false });
-      if (collabsData && !cancelled) setUserCollabs(collabsData);
-
-      // Fetch Followers Count
-      const { data: fCount } = await supabase.rpc("get_followers_count", { target_user_id: profileId });
-      if (!cancelled && typeof fCount === 'number') setFollowersCount(fCount);
-
-      // Fetch Following Count
-      const { data: fngCount } = await supabase.rpc("get_following_count", { target_user_id: profileId });
-      if (!cancelled && typeof fngCount === 'number') setFollowingCount(fngCount);
-
-      // Fetch Social Links
-      const { data: socials } = await supabase.from("social_links").select("*").eq("user_id", profileId);
-      if (socials && !cancelled) setSocialLinks(socials);
-
-      // Check if Following
-      if (currentLoggedInId && !own) {
-        const { data: isF } = await supabase.rpc("is_following", { f_id: currentLoggedInId, t_id: profileId });
-        if (!cancelled) setIsFollowing(!!isF);
-      }
-
-      // Fetch Similar People (shared interests or clubs)
-      if (prof) {
-        const myInterests = (prof.interests as string[] | null) || [];
-        const myClubs = (prof.clubs as string[] | null) || [];
-        if (myInterests.length > 0 || myClubs.length > 0) {
-          const { data: allUsers } = await supabase
-            .from("users")
-            .select("id, full_name, stream, interests, clubs, avatar_url")
-            .neq("id", profileId)
-            .limit(50);
-          if (allUsers && !cancelled) {
-            const scored = allUsers.map((u: any) => {
-              const uInterests: string[] = u.interests || [];
-              const uClubs: string[] = u.clubs || [];
-              const sharedInterests = myInterests.filter(i => uInterests.map((x: string) => x.toLowerCase()).includes(i.toLowerCase()));
-              const sharedClubs = myClubs.filter(c => uClubs.map((x: string) => x.toLowerCase()).includes(c.toLowerCase()));
-              const sharedTags = [...sharedInterests, ...sharedClubs.map(c => `🏛 ${c}`)];
-              return { ...u, interests: uInterests, clubs: uClubs, sharedTags, score: sharedTags.length };
-            })
-            .filter(u => u.score > 0)
-            .sort((a, b) => b.score - a.score)
-            .slice(0, 4);
-            setSimilarPeople(scored);
-          }
-        }
-      }
-
-      setLoading(false);
-    })();
-    return () => { cancelled = true; };
-  }, [profileId, user, authLoading, router]);
 
   /* ── PREVENT OUTSIDE CLICK DROPDOWN ── */
   useEffect(() => {
@@ -370,9 +233,7 @@ export default function ProfilePage() {
     if (!profileId) return;
 
     const fetchActivity = async () => {
-      console.log('Fetching activity in ProfilePage (realtime) for user:', profileId);
       const { data, error } = await supabase.rpc('get_user_activity', { p_user_id: profileId });
-      console.log('RPC get_user_activity response (realtime):', { data, error });
       if (!error && data) {
          setActivities((data as any[]).slice(0, 5) as ActivityItem[]);
       }
@@ -416,7 +277,6 @@ export default function ProfilePage() {
     if (typeof fngCount === 'number') setFollowingCount(fngCount);
   }, [profileId]);
 
-  if (loading) return <SkeletonPage />;
   if (!profile) return (
      <div className="flex items-center justify-center min-h-screen text-white">
        Profile not found
@@ -646,8 +506,6 @@ export default function ProfilePage() {
 
   return (
     <div className="profile-page">
-      {/* ── NAV ── */}
-      <TopNav />
 
       {/* ── BANNER ── */}
       <div 
@@ -1230,7 +1088,7 @@ export default function ProfilePage() {
 
       {/* ── FOOTER ── */}
       <footer className="pf-footer">
-        <span className="pf-foot-l">© 2025 Kinexis · Made for Indian university students</span>
+        <span className="pf-foot-l">© 2026 Kinexis · Made for Indian university students</span>
         <span className="pf-foot-r">kinexis.in</span>
       </footer>
 

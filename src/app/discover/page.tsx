@@ -22,7 +22,7 @@ export default async function DiscoverPage() {
       <TopNav />
       <DiscoverClient initialData={discoverData} userId={user.id} />
       <footer className="disc-footer">
-        <span className="disc-foot-l">© 2025 Kinexis</span>
+        <span className="disc-foot-l">© 2026 Kinexis</span>
         <span className="disc-foot-r">kinexis.in</span>
       </footer>
     </div>

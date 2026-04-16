@@ -9,6 +9,12 @@ import TeamCard from "./TeamCard";
 import EventCard from "./EventCard";
 import ClubCard from "./ClubCard";
 
+interface DiscoverFeedProps {
+  initialData: any;
+  userId: string;
+  onSearchNavigate?: (query: string) => void;
+}
+
 /* ── FALLBACK DATA ── */
 const FALLBACK_PROFILES = [
   { id: "ee4542f2-29fc-4b4c-9410-514d970fee1b", initials: "EK", name: "Ekansh", batch: "CS · 4th yr · IIT Delhi", vibe: "Core Founder of Kinexis", vibeBg: "rgba(158,240,26,.1)", vibeColor: "var(--lime)", tags: ["Product", "React", "Node.js"], accent: "var(--lime)" },
@@ -41,7 +47,7 @@ function mapUserToProfile(user: any, i: number) {
   };
 }
 
-export default function DiscoverFeed({ initialData, userId }: { initialData: any, userId: string }) {
+export default function DiscoverFeed({ initialData, userId, onSearchNavigate }: DiscoverFeedProps) {
   const feedRef = useRef<HTMLDivElement>(null);
   
   const [allProfiles, setAllProfiles] = useState<any[]>(() => {
@@ -58,6 +64,7 @@ export default function DiscoverFeed({ initialData, userId }: { initialData: any
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(allProfiles.length > PAGE_SIZE);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   // Derived datasets
   const collabs = useMemo(() => {
@@ -161,7 +168,33 @@ export default function DiscoverFeed({ initialData, userId }: { initialData: any
       {/* Search */}
       <div className="disc-search">
         <span className="disc-search-icon">🔍</span>
-        <input className="disc-search-input" placeholder="Search people, projects, events, clubs…" type="text" />
+        <input
+          className="disc-search-input"
+          placeholder="Search people, projects, events, clubs…"
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && searchQuery.trim() && onSearchNavigate) {
+              onSearchNavigate(searchQuery.trim());
+            }
+          }}
+        />
+        {searchQuery && (
+          <button
+            onClick={() => setSearchQuery("")}
+            style={{
+              background: "none",
+              border: "none",
+              color: "rgba(255,255,255,0.4)",
+              cursor: "pointer",
+              fontSize: 16,
+              padding: "0 8px",
+            }}
+          >
+            ✕
+          </button>
+        )}
         <span className="disc-search-shortcut">⌘K</span>
       </div>
 

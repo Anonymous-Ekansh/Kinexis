@@ -711,7 +711,7 @@ export default function Home() {
 
         {/* FOOTER */}
         <footer>
-          <span className="foot-l">© 2025 Kinexis</span>
+          <span className="foot-l">© 2026 Kinexis</span>
           <span className="foot-r">kinexis.in</span>
         </footer>
       </div>

@@ -252,7 +252,7 @@ export async function getDiscoverData(userId: string) {
   const todayISO = new Date().toISOString().split("T")[0];
 
   const p_me = supabase.from("users").select("interests").eq("id", userId).single();
-  const p_users = supabase.from("users").select("id, full_name, stream, year, interests, currently_focused_on, avatar_url, follower_count").neq("id", userId);
+  const p_users = supabase.from("users").select("id, full_name, stream, year, interests, currently_focused_on, avatar_url, follower_count, created_at").neq("id", userId).order("created_at", { ascending: false }).limit(50);
   const p_votes = supabase.from("feed_votes").select("post_id, vote");
   const p_posts = supabase.from("feed_posts").select("id, user_id");
   const p_collabs = supabase.from("collabs").select("id, title, category, description, looking_for, tags, spots_total, spots_filled, status, author:author_id(full_name)").eq("status", "open").order("created_at", { ascending: false }).limit(20);
@@ -277,7 +277,8 @@ export async function getDiscoverData(userId: string) {
     const matchCount = myInterests.length > 0 ? theirInterests.filter((t: string) => myInterests.includes(t)).length : 0;
     return { ...u, matchCount };
   });
-  scoredUsers.sort((a: any, b: any) => b.matchCount - a.matchCount || (a.full_name || "").localeCompare(b.full_name || ""));
+  scoredUsers.sort((a: any, b: any) => b.matchCount - a.matchCount || (b.follower_count || 0) - (a.follower_count || 0) || (a.full_name || "").localeCompare(b.full_name || ""));
+  // Always show at least 3 people, even if no interest matches
   const dpPeople = scoredUsers.slice(0, 3);
 
   // DiscoverPeople (Top Users via score)
@@ -292,7 +293,7 @@ export async function getDiscoverData(userId: string) {
     const upvotes = userScores[u.id] || 0;
     const followers = u.follower_count || 0;
     return { ...u, score: upvotes + followers, upvotes, followers };
-  }).sort((a: any, b: any) => b.score - a.score).slice(0, 50);
+  }).sort((a: any, b: any) => b.score - a.score || new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
 
   // Trending tags
   const freq: Record<string, number> = {};
@@ -376,4 +377,90 @@ export async function getMessagesData(userId: string) {
   }
 
   return { initialConversations, initialRequests, initialSentRequests };
+}
+
+// --- Profile Data ---
+export async function getProfileData(profileId: string, viewerId: string | null) {
+  const supabase = await createClient();
+
+  const isOwnProfile = viewerId === profileId;
+
+  // Fire all independent queries in parallel
+  const [
+    res_profile,
+    res_projects,
+    res_activity,
+    res_collabs,
+    res_followersCount,
+    res_followingCount,
+    res_socialLinks,
+    res_similarUsers,
+  ] = await Promise.all([
+    // 1. Profile
+    supabase.from("users").select("*").eq("id", profileId).single(),
+    // 2. Projects
+    supabase.from("projects").select("*").eq("user_id", profileId).order("created_at", { ascending: false }),
+    // 3. Activity (RPC)
+    supabase.rpc("get_user_activity", { p_user_id: profileId }),
+    // 4. Collabs
+    supabase.from("collabs").select("*").eq("author_id", profileId).order("created_at", { ascending: false }),
+    // 5. Followers count
+    supabase.rpc("get_followers_count", { target_user_id: profileId }),
+    // 6. Following count
+    supabase.rpc("get_following_count", { target_user_id: profileId }),
+    // 7. Social links
+    supabase.from("social_links").select("*").eq("user_id", profileId),
+    // 8. Similar people candidates
+    supabase.from("users").select("id, full_name, stream, interests, clubs, avatar_url").neq("id", profileId).limit(50),
+  ]);
+
+  const profile = res_profile.data;
+  if (!profile) {
+    return { initialProfile: null, initialProjects: [], initialActivities: [], initialCollabs: [], initialFollowersCount: 0, initialFollowingCount: 0, initialSocialLinks: [], initialIsFollowing: false, initialSimilarPeople: [], isOwnProfile };
+  }
+
+  // Check if viewer is following this profile (only if not own profile)
+  let initialIsFollowing = false;
+  if (viewerId && !isOwnProfile) {
+    const { data: isF } = await supabase.rpc("is_following", { f_id: viewerId, t_id: profileId });
+    initialIsFollowing = !!isF;
+  }
+
+  // Mark activity as read on own profile
+  if (isOwnProfile && viewerId) {
+    supabase.from("activity").update({ is_read: true }).eq("user_id", viewerId).eq("is_read", false).then(() => {});
+  }
+
+  // Compute similar people
+  const myInterests: string[] = (profile.interests as string[] | null) || [];
+  const myClubs: string[] = (profile.clubs as string[] | null) || [];
+  let initialSimilarPeople: any[] = [];
+
+  if ((myInterests.length > 0 || myClubs.length > 0) && res_similarUsers.data) {
+    const scored = res_similarUsers.data.map((u: any) => {
+      const uInterests: string[] = u.interests || [];
+      const uClubs: string[] = u.clubs || [];
+      const sharedInterests = myInterests.filter(i => uInterests.map((x: string) => x.toLowerCase()).includes(i.toLowerCase()));
+      const sharedClubs = myClubs.filter(c => uClubs.map((x: string) => x.toLowerCase()).includes(c.toLowerCase()));
+      const sharedTags = [...sharedInterests, ...sharedClubs.map(c => `🏛 ${c}`)];
+      return { ...u, interests: uInterests, clubs: uClubs, sharedTags, score: sharedTags.length };
+    })
+    .filter(u => u.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 4);
+    initialSimilarPeople = scored;
+  }
+
+  return {
+    initialProfile: profile,
+    initialProjects: res_projects.data || [],
+    initialActivities: ((res_activity.data as any[]) || []).slice(0, 5),
+    initialCollabs: res_collabs.data || [],
+    initialFollowersCount: typeof res_followersCount.data === 'number' ? res_followersCount.data : 0,
+    initialFollowingCount: typeof res_followingCount.data === 'number' ? res_followingCount.data : 0,
+    initialSocialLinks: res_socialLinks.data || [],
+    initialIsFollowing,
+    initialSimilarPeople,
+    isOwnProfile,
+  };
 }
