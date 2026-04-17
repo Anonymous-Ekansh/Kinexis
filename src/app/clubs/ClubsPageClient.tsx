@@ -104,12 +104,16 @@ export default function ClubsPageClient({ initialClubs, initialFollowedIds, user
     return { total: clubs.length, followers: totalFollowers, categories: uniqueCats };
   }, [clubs]);
 
+  const [loadingClubs, setLoadingClubs] = useState<Set<string>>(new Set());
+
   // Follow Action
   const toggleFollow = useCallback(async (club: Club) => {
     if (!userId) {
       router.push("/login?redirect=/clubs");
       return;
     }
+    
+    if (loadingClubs.has(club.id)) return;
 
     const isFollowing = followedIds.has(club.id);
     
@@ -123,24 +127,31 @@ export default function ClubsPageClient({ initialClubs, initialFollowedIds, user
 
     setClubs(prev => prev.map(c => {
       if (c.id === club.id) {
-        return { ...c, follower_count: c.follower_count + (isFollowing ? -1 : 1) };
+        return { ...c, follower_count: Math.max(0, c.follower_count + (isFollowing ? -1 : 1)) };
       }
       return c;
     }));
 
+    setLoadingClubs(prev => new Set(prev).add(club.id));
+
     try {
       if (isFollowing) {
         // Unfollow
-        await supabase.from("club_members").delete().match({ club_id: club.id, user_id: userId });
-        await supabase.from("clubs").update({ follower_count: (club.follower_count || 0) - 1 }).eq('id', club.id);
+        const { error: err1 } = await supabase.from("club_members").delete().match({ club_id: club.id, user_id: userId });
+        if (err1) throw new Error("Delete failed: " + err1.message);
+        
+        // Some setups don't allow followers to manually update clubs table count, so we ignore count update errors
+        await supabase.from("clubs").update({ follower_count: Math.max(0, (club.follower_count || 0) - 1) }).eq('id', club.id);
         logActivity({ userId, activityType: "unfollow_club", targetTitle: club.name, targetId: club.id, targetType: "club" });
       } else {
         // Follow
-        await supabase.from("club_members").insert({ club_id: club.id, user_id: userId });
+        const { error: err1 } = await supabase.from("club_members").insert({ club_id: club.id, user_id: userId, role: "follower" });
+        if (err1) throw new Error("Insert failed: " + err1.message);
+        
         await supabase.from("clubs").update({ follower_count: (club.follower_count || 0) + 1 }).eq('id', club.id);
         logActivity({ userId, activityType: "follow_club", targetTitle: club.name, targetId: club.id, targetType: "club" });
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Failed to toggle follow:", err);
       // Revert optimism
       setFollowedIds(prev => {
@@ -150,11 +161,17 @@ export default function ClubsPageClient({ initialClubs, initialFollowedIds, user
         return next;
       });
       setClubs(prev => prev.map(c => {
-        if (c.id === club.id) return { ...c, follower_count: c.follower_count + (isFollowing ? 1 : -1) };
+        if (c.id === club.id) return { ...c, follower_count: c.follower_count }; // Revert to original
         return c;
       }));
+    } finally {
+      setLoadingClubs(prev => {
+        const next = new Set(prev);
+        next.delete(club.id);
+        return next;
+      });
     }
-  }, [userId, followedIds, router]);
+  }, [userId, followedIds, loadingClubs, router]);
 
   // Generators for styling
   const getInitials = (name: string) => {
