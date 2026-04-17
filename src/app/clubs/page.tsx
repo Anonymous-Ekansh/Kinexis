@@ -1,3 +1,6 @@
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 import { createClient } from "@/lib/supabase-server"
 import { redirect } from "next/navigation"
 import TopNav from "@/components/TopNav"
@@ -13,19 +16,17 @@ export default async function ClubsPage() {
     redirect("/login")
   }
 
-  // Fetch clubs server-side — single query, no waterfall
-  const { data: clubsData } = await supabase
-    .from("clubs")
-    .select("*")
-    .order("follower_count", { ascending: false })
+  // Fetch clubs and followed IDs in parallel for better performance and consistency
+  const [clubsRes, followRes] = await Promise.all([
+    supabase.from("clubs").select("*").order("follower_count", { ascending: false }),
+    supabase.from("club_members").select("club_id").eq("user_id", user.id)
+  ]);
 
-  // Fetch user's followed clubs in parallel
-  const { data: followData } = await supabase
-    .from("club_members")
-    .select("club_id")
-    .eq("user_id", user.id)
+  if (clubsRes.error) console.error("[ClubsPage] Error fetching clubs:", clubsRes.error.message);
+  if (followRes.error) console.error("[ClubsPage] Error fetching follows:", followRes.error.message);
 
-  const followedIds = (followData || []).map(f => f.club_id)
+  const clubsData = clubsRes.data || [];
+  const followedIds = (followRes.data || []).map(f => f.club_id);
 
   return (
     <div className="clubs-page">

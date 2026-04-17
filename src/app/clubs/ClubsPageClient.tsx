@@ -137,31 +137,41 @@ export default function ClubsPageClient({ initialClubs, initialFollowedIds, user
     try {
       if (isFollowing) {
         // Unfollow
-        const { error: err1 } = await supabase.from("club_members").delete().match({ club_id: club.id, user_id: userId });
-        if (err1) throw new Error("Delete failed: " + err1.message);
+        const { error: err1 } = await supabase
+          .from("club_members")
+          .delete()
+          .eq("club_id", club.id)
+          .eq("user_id", userId);
+          
+        if (err1) throw err1;
         
         // Some setups don't allow followers to manually update clubs table count, so we ignore count update errors
         await supabase.from("clubs").update({ follower_count: Math.max(0, (club.follower_count || 0) - 1) }).eq('id', club.id);
         logActivity({ userId, activityType: "unfollow_club", targetTitle: club.name, targetId: club.id, targetType: "club" });
       } else {
         // Follow
-        const { error: err1 } = await supabase.from("club_members").insert({ club_id: club.id, user_id: userId, role: "follower" });
-        if (err1) throw new Error("Insert failed: " + err1.message);
+        const { error: err1 } = await supabase
+          .from("club_members")
+          .insert({ club_id: club.id, user_id: userId, role: "follower" });
+          
+        if (err1) throw err1;
         
         await supabase.from("clubs").update({ follower_count: (club.follower_count || 0) + 1 }).eq('id', club.id);
         logActivity({ userId, activityType: "follow_club", targetTitle: club.name, targetId: club.id, targetType: "club" });
       }
     } catch (err: any) {
-      console.error("Failed to toggle follow:", err);
-      // Revert optimism
+      console.error("[ClubsPage] Failed to toggle follow:", err.message || err);
+      
+      // Revert optimism using the original values
       setFollowedIds(prev => {
         const next = new Set(prev);
         if (isFollowing) next.add(club.id);
         else next.delete(club.id);
         return next;
       });
+      
       setClubs(prev => prev.map(c => {
-        if (c.id === club.id) return { ...c, follower_count: c.follower_count }; // Revert to original
+        if (c.id === club.id) return { ...c, follower_count: club.follower_count };
         return c;
       }));
     } finally {

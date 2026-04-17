@@ -236,15 +236,46 @@ export default function ChannelsPageClient({ userId, initialData }: { userId: st
     }
   }, [userId, userReactions]);
 
+  const [loadingChannelsFollow, setLoadingChannelsFollow] = useState(false);
+
   const toggleFollow = useCallback(async () => {
-    if (!userId || !activeId) return; const isF = followingByClub[activeId];
+    if (!userId || !activeId || loadingChannelsFollow) return; 
+    setLoadingChannelsFollow(true);
+    const isF = followingByClub[activeId];
     setFollowingByClub(prev => ({ ...prev, [activeId]: !isF }));
-    if (isF) { await supabase.from("club_members").delete().match({ club_id: activeId, user_id: userId });
-      const club = clubs.find(c => c.id === activeId); if (club) await supabase.from("clubs").update({ follower_count: Math.max(0, (club.follower_count || 0) - 1) }).eq("id", activeId);
-      setClubs(prev => prev.filter(c => c.id !== activeId)); const rem = clubs.filter(c => c.id !== activeId); setActiveId(rem.length > 0 ? rem[0].id : null);
-    } else { await supabase.from("club_members").insert({ club_id: activeId, user_id: userId, role: "follower" });
-      const club = clubs.find(c => c.id === activeId); if (club) await supabase.from("clubs").update({ follower_count: (club.follower_count || 0) + 1 }).eq("id", activeId); }
-  }, [userId, activeId, followingByClub, clubs]);
+    
+    try {
+      if (isF) { 
+        const { error } = await supabase.from("club_members").delete().match({ club_id: activeId, user_id: userId });
+        if (error) throw error;
+        
+        const club = clubs.find(c => c.id === activeId); 
+        if (club) {
+           const { error: updErr } = await supabase.from("clubs").update({ follower_count: Math.max(0, (club.follower_count || 0) - 1) }).eq("id", activeId);
+           if (updErr) console.error("[Supabase Error] clubs follower_count update:", updErr.message);
+        }
+        
+        setClubs(prev => prev.filter(c => c.id !== activeId)); 
+        const rem = clubs.filter(c => c.id !== activeId); 
+        setActiveId(rem.length > 0 ? rem[0].id : null);
+      } else { 
+        const { error } = await supabase.from("club_members").insert({ club_id: activeId, user_id: userId, role: "follower" });
+        if (error) throw error;
+        
+        const club = clubs.find(c => c.id === activeId); 
+        if (club) {
+           const { error: updErr } = await supabase.from("clubs").update({ follower_count: (club.follower_count || 0) + 1 }).eq("id", activeId);
+           if (updErr) console.error("[Supabase Error] clubs follower_count update:", updErr.message);
+        }
+      }
+    } catch (err: any) {
+      console.error("Failed to toggle follow status:", err);
+      // Revert optimistic UI
+      setFollowingByClub(prev => ({ ...prev, [activeId]: isF }));
+    } finally {
+      setLoadingChannelsFollow(false);
+    }
+  }, [userId, activeId, followingByClub, clubs, loadingChannelsFollow]);
 
   const handleCompose = useCallback(async () => {
     const isEventValid = composeType === "event" && eventMeta.event_title.trim() && eventMeta.event_date && eventMeta.event_time && eventMeta.event_location.trim() && eventMeta.event_desc.trim() && eventMeta.event_tags.length > 0;
