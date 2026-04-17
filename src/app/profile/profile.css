@@ -793,10 +793,6 @@
 .pf-btn-follow.following:hover {
   background: rgba(251,113,133,0.1); border-color: rgba(251,113,133,0.3); color: var(--coral);
 }
-.pf-btn-follow.following:hover::after { content: "Unfollow"; }
-.pf-btn-follow.following:hover span { display: none; }
-/* Using JS to handle the Unfollow text is better if we want to avoid ::after complexities, 
-   but for now we'll use simple class-based display in TSX. */
 
 /* Network Panel Overlay & Modal (Centered) */
 .pf-network-panel-overlay {

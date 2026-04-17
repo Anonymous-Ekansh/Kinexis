@@ -7,6 +7,7 @@ import { supabase } from "@/lib/supabase";
 import { logActivity } from "@/lib/logActivity";
 import CropModal from "@/components/profile/CropModal";
 import NetworkPanel from "@/components/profile/NetworkPanel";
+import FollowButton from "@/components/shared/FollowButton";
 import "../profile.css";
 
 interface ProfilePageClientProps {
@@ -127,8 +128,6 @@ export default function ProfilePageClient({ profileId, viewerId, initialData }: 
 
   // Core Data State (initialized from server data)
   const [isFollowing, setIsFollowing] = useState(initialData.initialIsFollowing);
-  const [followLoading, setFollowLoading] = useState(false);
-  const [isHoveringFollow, setIsHoveringFollow] = useState(false);
   const [profile, setProfile] = useState<Profile | null>(initialData.initialProfile as Profile | null);
   const [projects, setProjects] = useState<Project[]>(initialData.initialProjects as Project[]);
   const [userCollabs, setUserCollabs] = useState<any[]>(initialData.initialCollabs);
@@ -287,36 +286,7 @@ export default function ProfilePageClient({ profileId, viewerId, initialData }: 
   const hasAvatar = !!profile.avatar_url;
   const hasCover = !!profile.cover_url;
 
-  /* ═══ FOLLOW HANDLERS ═══ */
-  const toggleFollow = async () => {
-    if (!loggedInUserId) { router.push("/login"); return; }
-    if (followLoading) return;
-    setFollowLoading(true);
 
-    if (isFollowing) {
-      const { error } = await supabase.from("follows").delete().eq("follower_id", loggedInUserId).eq("following_id", profileId);
-      if (!error) {
-        setIsFollowing(false);
-        await refreshFollowCounts();
-        showToast("Unfollowed", "success");
-        logActivity({ userId: loggedInUserId, activityType: "unfollow_user", targetTitle: profile.full_name || "a user", targetId: profileId, targetType: "user" });
-      }
-    } else {
-      const { error } = await supabase.from("follows").insert({ follower_id: loggedInUserId, following_id: profileId });
-      if (!error) {
-        setIsFollowing(true);
-        await refreshFollowCounts();
-        showToast("Following", "success");
-        logActivity({ userId: loggedInUserId, activityType: "follow_user", targetTitle: profile.full_name || "a user", targetId: profileId, targetType: "user" });
-      }
-    }
-
-    if (typeof window !== "undefined") {
-      window.dispatchEvent(new CustomEvent("activityUpdated"));
-    }
-
-    setFollowLoading(false);
-  };
 
   /* ═══ PROFILE EDITING HANDLERS ═══ */
   const saveField = async (updates: Record<string, unknown>) => {
@@ -658,15 +628,15 @@ export default function ProfilePageClient({ profileId, viewerId, initialData }: 
             {isOwnProfile ? (
               <button className="pf-btn-edit-profile" onClick={openEditMode}>✎ Edit profile</button>
             ) : (
-              <button 
-                className={`pf-btn-follow ${isFollowing ? "following" : ""}`} 
-                onClick={toggleFollow}
-                disabled={followLoading}
-                onMouseEnter={() => setIsHoveringFollow(true)}
-                onMouseLeave={() => setIsHoveringFollow(false)}
-              >
-                {isFollowing ? (isHoveringFollow ? "Unfollow" : "Following") : "Follow"}
-              </button>
+              <FollowButton 
+                targetUserId={profileId} 
+                className="pf-btn-follow"
+                onFollowChange={(state) => {
+                  if (state) setFollowersCount(v => v + 1);
+                  else setFollowersCount(v => Math.max(0, v - 1));
+                  setIsFollowing(state);
+                }}
+              />
             )}
             <button className="pf-btn-share">↗</button>
           </div>

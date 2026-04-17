@@ -426,8 +426,18 @@ export async function getProfileData(profileId: string, viewerId: string | null)
   // Check if viewer is following this profile (only if not own profile)
   let initialIsFollowing = false;
   if (viewerId && !isOwnProfile) {
-    const { data: isF } = await supabase.rpc("is_following", { f_id: viewerId, t_id: profileId });
-    initialIsFollowing = !!isF;
+    const { data: isF, error: rpcErr } = await supabase.rpc("is_following", { f_id: viewerId, t_id: profileId });
+    if (rpcErr || isF === null) {
+      const { data: directCheck } = await supabase
+        .from("follows")
+        .select("*")
+        .eq("follower_id", viewerId)
+        .eq("following_id", profileId)
+        .maybeSingle();
+      initialIsFollowing = !!directCheck;
+    } else {
+      initialIsFollowing = !!isF;
+    }
   }
 
   // Mark activity as read on own profile
