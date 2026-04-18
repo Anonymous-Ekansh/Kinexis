@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo, useCallback } from "react";
+import { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 import "./collabs.css";
 
@@ -57,6 +57,34 @@ export default function CollabsPageClient({ userId, initialData }: { userId: str
   const [formSpots, setFormSpots] = useState(1);
   const [formOpen, setFormOpen] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+
+  // Part 1 — Join button state
+  const [requestStatusMap, setRequestStatusMap] = useState<Record<string, string>>(initialData?.initialRequestStatuses || {});
+  const [membershipSet, setMembershipSet] = useState<Set<string>>(new Set(initialData?.initialMembershipIds || []));
+
+  // Part 2 — Join modal state
+  const [joinModalCollab, setJoinModalCollab] = useState<any | null>(null);
+  const [joinMessage, setJoinMessage] = useState("");
+  const [joinSubmitting, setJoinSubmitting] = useState(false);
+  const [joinError, setJoinError] = useState("");
+
+  // Part 3 & 8 — Detail modal state
+  const [detailCollab, setDetailCollab] = useState<any | null>(null);
+  const [pendingRequests, setPendingRequests] = useState<any[]>([]);
+  const [collabMembers, setCollabMembers] = useState<any[]>([]);
+  const [requestErrors, setRequestErrors] = useState<Record<string, string>>({});
+
+  // Part 7 — Activity state
+  const [activityItems, setActivityItems] = useState<any[]>([]);
+  const [userProfile, setUserProfile] = useState<any>(null);
+
+  // Fetch user profile for activity panel avatars
+  useEffect(() => {
+    if (!userId) return;
+    supabase.from("users").select("id, full_name, avatar_url").eq("id", userId).single().then(({ data }) => {
+      if (data) setUserProfile(data);
+    });
+  }, [userId]);
 
   const fetchCollabs = useCallback(async (append = false, customOffset = 0) => {
     const { data, error } = await supabase
@@ -137,14 +165,255 @@ export default function CollabsPageClient({ userId, initialData }: { userId: str
     fetchStats();
   };
 
-  const handleJoin = async (collabId: string) => {
-    const { error } = await supabase.from("collab_requests").insert({ collab_id: collabId, user_id: userId });
+  // --- Part 1: Join button state ---
+  const getJoinButtonState = useCallback((collab: any): { label: string; disabled: boolean; hidden: boolean } => {
+    const authorId = collab.author_id || collab.author?.id;
+    if (authorId === userId) return { label: "", disabled: true, hidden: true };
+    if (collab.status === "closed" || (collab.spots_filled || 0) >= (collab.spots_total || 1)) return { label: "Full", disabled: true, hidden: false };
+    if (membershipSet.has(collab.id) || requestStatusMap[collab.id] === "accepted") return { label: "Joined ✓", disabled: true, hidden: false };
+    if (requestStatusMap[collab.id] === "pending") return { label: "Requested", disabled: true, hidden: false };
+    if (requestStatusMap[collab.id] === "declined") return { label: "Declined", disabled: true, hidden: false };
+    return { label: "Join", disabled: false, hidden: false };
+  }, [userId, membershipSet, requestStatusMap]);
+
+  // --- Part 2: Join modal ---
+  const handleJoinClick = useCallback((collab: any) => {
+    setJoinModalCollab(collab);
+    setJoinMessage("");
+    setJoinError("");
+  }, []);
+
+  const handleJoinSubmit = useCallback(async () => {
+    if (!joinModalCollab || joinSubmitting) return;
+    setJoinSubmitting(true);
+    setJoinError("");
+
+    const { data, error } = await supabase.rpc("request_to_join_collab", {
+      p_collab_id: joinModalCollab.id,
+      p_user_id: userId,
+      p_message: joinMessage.trim() || null,
+    });
+
+    setJoinSubmitting(false);
+
     if (error) {
-      alert("Could not join: " + error.message);
-    } else {
-      alert("Join request sent! 🎉");
+      setJoinError(error.message);
+      return;
     }
-  };
+
+    if (data && typeof data === "string" && data !== "success") {
+      setJoinError(data);
+      return;
+    }
+
+    setRequestStatusMap(prev => ({ ...prev, [joinModalCollab.id]: "pending" }));
+    setJoinModalCollab(null);
+    setJoinMessage("");
+  }, [joinModalCollab, joinSubmitting, joinMessage, userId]);
+
+  // --- Part 3 & 8: Detail modal ---
+  const openDetail = useCallback(async (collab: any) => {
+    setDetailCollab(collab);
+    setPendingRequests([]);
+    setCollabMembers([]);
+    setRequestErrors({});
+
+    const authorId = collab.author_id || collab.author?.id;
+
+    // Always fetch members
+    const { data: members } = await supabase
+      .from("collab_members_with_profiles")
+      .select("*")
+      .eq("collab_id", collab.id);
+    if (members) setCollabMembers(members);
+
+    // If author, fetch pending requests
+    if (authorId === userId) {
+      const { data: requests } = await supabase
+        .from("pending_requests_with_profiles")
+        .select("*")
+        .eq("collab_id", collab.id);
+      if (requests) setPendingRequests(requests);
+    }
+  }, [userId]);
+
+  // --- Part 4: Accept ---
+  const handleAccept = useCallback(async (requestId: string) => {
+    setRequestErrors(prev => ({ ...prev, [requestId]: "" }));
+
+    const { data, error } = await supabase.rpc("accept_collab_request", {
+      p_request_id: requestId,
+      p_user_id: userId,
+    });
+
+    if (error) {
+      setRequestErrors(prev => ({ ...prev, [requestId]: error.message }));
+      return;
+    }
+    if (data && typeof data === "string" && data !== "success") {
+      setRequestErrors(prev => ({ ...prev, [requestId]: data }));
+      return;
+    }
+
+    setPendingRequests(prev => prev.filter(r => r.id !== requestId));
+
+    if (detailCollab) {
+      const newFilled = (detailCollab.spots_filled || 0) + 1;
+      const isFull = newFilled >= (detailCollab.spots_total || 1);
+      const updated = { ...detailCollab, spots_filled: newFilled, status: isFull ? "closed" : detailCollab.status };
+      setDetailCollab(updated);
+      if (isFull) setPendingRequests([]);
+      setAllCollabs(prev => prev.map(c => c.id === detailCollab.id ? { ...c, spots_filled: newFilled, status: isFull ? "closed" : c.status } : c));
+
+      // Refetch members
+      const { data: members } = await supabase
+        .from("collab_members_with_profiles")
+        .select("*")
+        .eq("collab_id", detailCollab.id);
+      if (members) setCollabMembers(members);
+    }
+  }, [userId, detailCollab]);
+
+  // --- Part 5: Decline ---
+  const handleDecline = useCallback(async (requestId: string) => {
+    setRequestErrors(prev => ({ ...prev, [requestId]: "" }));
+
+    const { data, error } = await supabase.rpc("decline_collab_request", {
+      p_request_id: requestId,
+      p_user_id: userId,
+    });
+
+    if (error) {
+      setRequestErrors(prev => ({ ...prev, [requestId]: error.message }));
+      return;
+    }
+    if (data && typeof data === "string" && data !== "success") {
+      setRequestErrors(prev => ({ ...prev, [requestId]: data }));
+      return;
+    }
+
+    setPendingRequests(prev => prev.filter(r => r.id !== requestId));
+  }, [userId]);
+
+  // --- Part 6: Live spot counter via Supabase Realtime ---
+  useEffect(() => {
+    const channel = supabase.channel("collabs_spots_realtime")
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "collabs" }, (payload: any) => {
+        const updated = payload.new;
+        setAllCollabs(prev => prev.map(c =>
+          c.id === updated.id
+            ? { ...c, spots_filled: updated.spots_filled, status: updated.status }
+            : c
+        ));
+        setDetailCollab((prev: any) => {
+          if (prev && prev.id === updated.id) {
+            return { ...prev, spots_filled: updated.spots_filled, status: updated.status };
+          }
+          return prev;
+        });
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, []);
+
+  // --- Part 7: Recent activity panel ---
+  const fetchActivity = useCallback(async () => {
+    if (!userId) return;
+
+    // 1. Requests the current user sent
+    const { data: myRequests } = await supabase
+      .from("collab_requests")
+      .select("id, collab_id, status, created_at, collabs:collab_id(title)")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+      .limit(10);
+
+    // 2. Requests others sent to collabs the current user created
+    const { data: myCollabs } = await supabase
+      .from("collabs")
+      .select("id")
+      .eq("author_id", userId);
+
+    const myCollabIds = (myCollabs || []).map((c: any) => c.id);
+
+    let incomingRequests: any[] = [];
+    if (myCollabIds.length > 0) {
+      const { data } = await supabase
+        .from("collab_requests")
+        .select("id, collab_id, user_id, status, created_at, collabs:collab_id(title), requester:user_id(full_name, avatar_url)")
+        .in("collab_id", myCollabIds)
+        .neq("user_id", userId)
+        .order("created_at", { ascending: false })
+        .limit(10);
+      incomingRequests = data || [];
+    }
+
+    const items: any[] = [];
+
+    (myRequests || []).forEach((r: any) => {
+      const title = r.collabs?.title || "a collab";
+      let boldText = "You";
+      let plainText = "";
+      if (r.status === "pending") plainText = `requested to join ${title}`;
+      else if (r.status === "accepted") plainText = `joined ${title}`;
+      else if (r.status === "declined") { boldText = "Your"; plainText = `request to ${title} was declined`; }
+      if (!plainText) return;
+
+      items.push({
+        id: `my-${r.id}`,
+        avatarName: userProfile?.full_name || null,
+        created_at: r.created_at,
+        boldText,
+        plainText,
+      });
+    });
+
+    incomingRequests.forEach((r: any) => {
+      const title = r.collabs?.title || "a collab";
+      const name = r.requester?.full_name || "Someone";
+      let boldText = name.split(" ")[0];
+      let plainText = "";
+
+      if (r.status === "pending") plainText = `wants to join ${title}`;
+      else if (r.status === "accepted") plainText = `joined ${title}`;
+      else if (r.status === "declined") { boldText = "You"; plainText = `declined ${name} for ${title}`; }
+      if (!plainText) return;
+
+      items.push({
+        id: `in-${r.id}`,
+        avatarName: r.status === "declined" ? (userProfile?.full_name || null) : (r.requester?.full_name || null),
+        created_at: r.created_at,
+        boldText,
+        plainText,
+      });
+    });
+
+    items.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    setActivityItems(items.slice(0, 10));
+  }, [userId, userProfile]);
+
+  useEffect(() => {
+    fetchActivity();
+
+    const channel = supabase.channel("collab_requests_activity")
+      .on("postgres_changes", { event: "*", schema: "public", table: "collab_requests" }, () => {
+        fetchActivity();
+        // Also refresh request statuses for join buttons
+        if (userId) {
+          supabase.from("collab_requests").select("collab_id, status").eq("user_id", userId).then(({ data }) => {
+            if (data) {
+              const map: Record<string, string> = {};
+              data.forEach((r: any) => { map[r.collab_id] = r.status; });
+              setRequestStatusMap(map);
+            }
+          });
+        }
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [fetchActivity, userId]);
 
   // filtering
   const filtered = useMemo(() => {
@@ -242,47 +511,52 @@ export default function CollabsPageClient({ userId, initialData }: { userId: str
           <div className="cb-layout">
             <div>
               {/* Featured */}
-              {featuredCollab && (
-                <>
-                  <div className="cb-section-label">Featured Collab</div>
-                  <div className="cb-featured">
-                    <div className="cb-featured-body">
-                      <div className="cb-featured-top">
-                        <div className="cb-featured-badges">
-                          <span className="cb-badge featured">Featured</span>
-                          {featuredCollab.is_open_collab && <span className="cb-badge open">Open to Join</span>}
-                          <span className="cb-badge cat">{featuredCollab.category || "Social"}</span>
+              {featuredCollab && (() => {
+                const fBtn = getJoinButtonState(featuredCollab);
+                return (
+                  <>
+                    <div className="cb-section-label">Featured Collab</div>
+                    <div className="cb-featured" onClick={() => openDetail(featuredCollab)}>
+                      <div className="cb-featured-body">
+                        <div className="cb-featured-top">
+                          <div className="cb-featured-badges">
+                            <span className="cb-badge featured">Featured</span>
+                            {featuredCollab.is_open_collab && <span className="cb-badge open">Open to Join</span>}
+                            <span className="cb-badge cat">{featuredCollab.category || "Social"}</span>
+                          </div>
+                          <div className="cb-featured-avatars">
+                            <div className="av-circle" style={{ background: ACCENT_BGS[0], color: ACCENT_COLORS[0] }}>{getInitials(featuredCollab.author?.full_name)}</div>
+                          </div>
                         </div>
-                        <div className="cb-featured-avatars">
-                          <div className="av-circle" style={{ background: ACCENT_BGS[0], color: ACCENT_COLORS[0] }}>{getInitials(featuredCollab.author?.full_name)}</div>
-                        </div>
-                      </div>
-                      <div className="cb-featured-title">{featuredCollab.title}</div>
-                      <div className="cb-featured-desc">{featuredCollab.description}</div>
-                      {featuredCollab.tags?.length > 0 && (
-                        <div className="cb-featured-tags">
-                          {featuredCollab.tags.map((t: string, i: number) => <span key={i} className="cb-tag">{t}</span>)}
-                        </div>
-                      )}
-                      <div className="cb-featured-footer">
-                        <div className="cb-featured-meta">
-                          <span>◦ {featuredCollab.stream || ""}{featuredCollab.batch_year ? `, ${featuredCollab.batch_year}` : ""}</span>
-                          <span>◦ Started {timeAgo(featuredCollab.created_at)}</span>
-                          <span>◦ {featuredCollab.spots_filled} of {featuredCollab.spots_total} spots filled</span>
-                        </div>
-                        <div className="cb-featured-actions">
-                          {featuredCollab.status === "open" && featuredCollab.spots_filled < featuredCollab.spots_total ? (
-                            <button className="cb-btn-join" onClick={() => handleJoin(featuredCollab.id)}>Join</button>
-                          ) : (
-                            <button className="cb-btn-view">View</button>
-                          )}
-                          <button className="cb-btn-view">View Details</button>
+                        <div className="cb-featured-title">{featuredCollab.title}</div>
+                        <div className="cb-featured-desc">{featuredCollab.description}</div>
+                        {featuredCollab.tags?.length > 0 && (
+                          <div className="cb-featured-tags">
+                            {featuredCollab.tags.map((t: string, i: number) => <span key={i} className="cb-tag">{t}</span>)}
+                          </div>
+                        )}
+                        <div className="cb-featured-footer">
+                          <div className="cb-featured-meta">
+                            <span>◦ {featuredCollab.stream || ""}{featuredCollab.batch_year ? `, ${featuredCollab.batch_year}` : ""}</span>
+                            <span>◦ Started {timeAgo(featuredCollab.created_at)}</span>
+                            <span>◦ {featuredCollab.spots_filled} of {featuredCollab.spots_total} spots filled</span>
+                          </div>
+                          <div className="cb-featured-actions">
+                            {!fBtn.hidden && (
+                              <button
+                                className="cb-btn-join"
+                                disabled={fBtn.disabled}
+                                onClick={e => { e.stopPropagation(); if (!fBtn.disabled) handleJoinClick(featuredCollab); }}
+                              >{fBtn.label}</button>
+                            )}
+                            <button className="cb-btn-view" onClick={e => { e.stopPropagation(); openDetail(featuredCollab); }}>View Details</button>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                </>
-              )}
+                  </>
+                );
+              })()}
 
               {/* Grid */}
               <div className="cb-section-label">All Collabs</div>
@@ -292,10 +566,10 @@ export default function CollabsPageClient({ userId, initialData }: { userId: str
                   const accentBg = ACCENT_BGS[idx % 4];
                   const st = STATUS_MAP[c.status] || STATUS_MAP.open;
                   const spotsOpen = (c.spots_total || 1) - (c.spots_filled || 0);
-                  const isFull = spotsOpen <= 0;
+                  const btn = getJoinButtonState(c);
 
                   return (
-                    <div key={c.id} className="cb-card" style={{ "--card-accent": accent } as React.CSSProperties}>
+                    <div key={c.id} className="cb-card" style={{ "--card-accent": accent } as React.CSSProperties} onClick={() => openDetail(c)}>
                       <div className="cb-card-top">
                         <span className="cb-badge cat">{c.category || "Social"}</span>
                         <span className="cb-card-status" style={{ color: st.color }}>{st.icon} {st.label}</span>
@@ -310,12 +584,14 @@ export default function CollabsPageClient({ userId, initialData }: { userId: str
                       <div className="cb-card-footer">
                         <div className="cb-card-members">
                           <div className="av-small" style={{ background: accentBg, color: accent }}>{getInitials(c.author?.full_name)}</div>
-                          <span>{isFull ? <span style={{ color: "var(--coral)" }}>Team full</span> : `${c.spots_filled || 1} members · ${spotsOpen} spots open`}</span>
+                          <span>{spotsOpen <= 0 ? <span style={{ color: "var(--coral)" }}>Team full</span> : `${c.spots_filled || 1} members · ${spotsOpen} spots open`}</span>
                         </div>
-                        {isFull ? (
-                          <button className="cb-btn-card view">View</button>
-                        ) : (
-                          <button className="cb-btn-card join" onClick={e => { e.stopPropagation(); handleJoin(c.id); }}>Join</button>
+                        {!btn.hidden && (
+                          <button
+                            className={`cb-btn-card ${btn.label === "Join" ? "join" : "view"}`}
+                            disabled={btn.disabled}
+                            onClick={e => { e.stopPropagation(); if (!btn.disabled) handleJoinClick(c); }}
+                          >{btn.label}</button>
                         )}
                       </div>
                     </div>
@@ -355,17 +631,22 @@ export default function CollabsPageClient({ userId, initialData }: { userId: str
                 )}
               </div>
 
+              {/* Part 7 — Recent Activity wired to real data */}
               <div className="cb-sidebar-card">
                 <div className="cb-sidebar-title">Recent Activity</div>
-                {allCollabs.slice(0, 4).map((c: any) => (
-                  <div key={c.id} className="cb-activity-item">
-                    <div className="cb-activity-av" style={{ background: "rgba(158,240,26,0.15)", color: "var(--lime)" }}>{getInitials(c.author?.full_name)}</div>
-                    <div>
-                      <div className="cb-activity-text"><b>{c.author?.full_name?.split(" ")[0] || "Someone"}</b> posted: {c.title}</div>
-                      <div className="cb-activity-time">{timeAgo(c.created_at)}</div>
+                {activityItems.length === 0 ? (
+                  <div style={{ fontSize: 12, color: "var(--muted)" }}>No recent activity.</div>
+                ) : (
+                  activityItems.map((item: any) => (
+                    <div key={item.id} className="cb-activity-item">
+                      <div className="cb-activity-av" style={{ background: "rgba(158,240,26,0.15)", color: "var(--lime)" }}>{getInitials(item.avatarName)}</div>
+                      <div>
+                        <div className="cb-activity-text"><b>{item.boldText}</b> {item.plainText}</div>
+                        <div className="cb-activity-time">{timeAgo(item.created_at)}</div>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
 
               <div className="cb-sidebar-card" style={{ background: "rgba(158,240,26,0.04)", borderColor: "rgba(158,240,26,0.18)" }}>
@@ -378,7 +659,7 @@ export default function CollabsPageClient({ userId, initialData }: { userId: str
         )}
       </div>
 
-      {/* Modal */}
+      {/* Create Collab Modal */}
       {showModal && (
         <div className="cb-modal-overlay" onClick={() => setShowModal(false)}>
           <div className="cb-modal" onClick={e => e.stopPropagation()}>
@@ -434,6 +715,115 @@ export default function CollabsPageClient({ userId, initialData }: { userId: str
             <div className="cb-modal-actions">
               <button className="cb-btn-submit" onClick={handleSubmit} disabled={submitting}>{submitting ? "Posting..." : "Post It"}</button>
               <button className="cb-btn-cancel" onClick={() => setShowModal(false)}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Part 2 — Join Modal */}
+      {joinModalCollab && (
+        <div className="cb-modal-overlay" onClick={() => setJoinModalCollab(null)}>
+          <div className="cb-modal" onClick={e => e.stopPropagation()}>
+            <div className="cb-modal-title">{joinModalCollab.title}</div>
+            <label className="cb-modal-label">Introduce yourself (optional)</label>
+            <textarea
+              className="cb-modal-textarea"
+              placeholder="Tell the creator a bit about yourself and why you'd like to join..."
+              value={joinMessage}
+              onChange={e => setJoinMessage(e.target.value)}
+            />
+            {joinError && (
+              <div style={{ fontSize: 12, color: "var(--coral)", marginBottom: 12 }}>{joinError}</div>
+            )}
+            <div className="cb-modal-actions">
+              <button className="cb-btn-submit" onClick={handleJoinSubmit} disabled={joinSubmitting}>{joinSubmitting ? "Sending..." : "Send Request"}</button>
+              <button className="cb-btn-cancel" onClick={() => setJoinModalCollab(null)}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Parts 3, 4, 5, 8 — Detail Modal */}
+      {detailCollab && (
+        <div className="cb-modal-overlay" onClick={() => setDetailCollab(null)}>
+          <div className="cb-modal" onClick={e => e.stopPropagation()}>
+            <div className="cb-modal-title">{detailCollab.title}</div>
+
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 14 }}>
+              <span className="cb-badge cat">{detailCollab.category || "Social"}</span>
+              {(() => {
+                const st = STATUS_MAP[detailCollab.status] || STATUS_MAP.open;
+                return <span className="cb-badge cat" style={{ color: st.color, borderColor: st.color }}>{st.icon} {st.label}</span>;
+              })()}
+            </div>
+
+            <div style={{ fontSize: 13, color: "var(--sub)", lineHeight: 1.65, marginBottom: 14 }}>{detailCollab.description}</div>
+
+            {detailCollab.tags?.length > 0 && (
+              <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginBottom: 14 }}>
+                {detailCollab.tags.map((t: string, i: number) => <span key={i} className="cb-tag">{t}</span>)}
+              </div>
+            )}
+
+            <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 14 }}>
+              {detailCollab.spots_filled || 0} of {detailCollab.spots_total || 1} spots filled
+              {(detailCollab.spots_filled || 0) >= (detailCollab.spots_total || 1) && (
+                <span style={{ color: "var(--coral)", marginLeft: 8 }}>— Team is full</span>
+              )}
+            </div>
+
+            {/* Part 3 — Join Requests (author only) */}
+            {(detailCollab.author_id || detailCollab.author?.id) === userId && (
+              <>
+                <div className="cb-section-label" style={{ marginTop: 8 }}>Join Requests</div>
+                {(detailCollab.spots_filled || 0) >= (detailCollab.spots_total || 1) ? (
+                  <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 14 }}>This collab is full. No more requests can be accepted.</div>
+                ) : pendingRequests.length === 0 ? (
+                  <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 14 }}>No pending requests.</div>
+                ) : (
+                  pendingRequests.map((req: any) => (
+                    <div key={req.id} style={{ marginBottom: 12 }}>
+                      <div className="cb-activity-item" style={{ borderBottom: "none", paddingBottom: 4 }}>
+                        <div className="cb-activity-av" style={{ background: "rgba(158,240,26,0.15)", color: "var(--lime)" }}>{getInitials(req.full_name)}</div>
+                        <div style={{ flex: 1 }}>
+                          <div className="cb-activity-text"><b>{req.full_name || "Someone"}</b> · {req.stream || ""}{req.batch_year ? `, ${req.batch_year}` : ""}</div>
+                          {req.message && <div style={{ fontSize: 12, color: "var(--sub)", marginTop: 4, fontStyle: "italic" }}>&ldquo;{req.message}&rdquo;</div>}
+                          <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
+                            <button className="cb-btn-card view" onClick={() => handleDecline(req.id)}>Decline</button>
+                            <button className="cb-btn-card join" onClick={() => handleAccept(req.id)}>Accept</button>
+                          </div>
+                          {requestErrors[req.id] && (
+                            <div style={{ fontSize: 11, color: "var(--coral)", marginTop: 4 }}>{requestErrors[req.id]}</div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </>
+            )}
+
+            {/* Part 8 — Members list */}
+            <div className="cb-section-label" style={{ marginTop: 8 }}>Team Members</div>
+            {collabMembers.length === 0 ? (
+              <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 14 }}>No members yet.</div>
+            ) : (
+              collabMembers.map((m: any) => (
+                <div key={m.user_id || m.id} className="cb-activity-item">
+                  <div className="cb-activity-av" style={{ background: "rgba(158,240,26,0.15)", color: "var(--lime)" }}>{getInitials(m.full_name)}</div>
+                  <div>
+                    <div className="cb-activity-text">
+                      <b>{m.full_name || "Unknown"}</b>
+                      {m.role === "creator" && <span style={{ fontSize: 10, marginLeft: 6, padding: "2px 6px", borderRadius: 4, background: "rgba(158,240,26,0.1)", color: "var(--lime)", fontWeight: 700 }}>Creator</span>}
+                    </div>
+                    <div className="cb-activity-time">{m.stream || ""}{m.batch_year ? ` · ${m.batch_year}` : ""}</div>
+                  </div>
+                </div>
+              ))
+            )}
+
+            <div className="cb-modal-actions" style={{ marginTop: 14 }}>
+              <button className="cb-btn-cancel" onClick={() => setDetailCollab(null)} style={{ flex: 1 }}>Close</button>
             </div>
           </div>
         </div>

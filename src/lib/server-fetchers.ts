@@ -129,7 +129,7 @@ export async function getEventsData(userId: string) {
 }
 
 // --- Collabs Data ---
-export async function getCollabsData() {
+export async function getCollabsData(userId?: string) {
   const supabase = await createClient();
   const { data: collabsData } = await supabase
     .from("collabs")
@@ -137,12 +137,23 @@ export async function getCollabsData() {
     .order("created_at", { ascending: false })
     .range(0, 11);
 
-  const [r1, r2, r3, r4] = await Promise.all([
+  const parallelQueries: PromiseLike<any>[] = [
     supabase.from("collabs").select("id", { count: "exact", head: true }),
     supabase.from("collabs").select("id", { count: "exact", head: true }).eq("is_open_collab", true),
     supabase.from("collabs").select("spots_filled"),
     supabase.from("collabs").select("id", { count: "exact", head: true }).gte("created_at", new Date(Date.now() - 7 * 86400000).toISOString()),
-  ]);
+  ];
+
+  if (userId) {
+    parallelQueries.push(
+      supabase.from("collab_requests").select("collab_id, status").eq("user_id", userId),
+      supabase.from("collab_members").select("collab_id").eq("user_id", userId),
+    );
+  }
+
+  const results = await Promise.all(parallelQueries);
+  const [r1, r2, r3, r4] = results;
+
   const involved = (r3.data || []).reduce((sum: number, r: any) => sum + (r.spots_filled || 0), 0);
   const stats = {
     total: r1.count || 0,
@@ -151,7 +162,19 @@ export async function getCollabsData() {
     thisWeek: r4.count || 0,
   };
 
-  return { initialCollabs: collabsData || [], initialStats: stats };
+  let initialRequestStatuses: Record<string, string> = {};
+  let initialMembershipIds: string[] = [];
+
+  if (userId) {
+    const reqRes = results[4];
+    const memRes = results[5];
+    if (reqRes.data) {
+      reqRes.data.forEach((r: any) => { initialRequestStatuses[r.collab_id] = r.status; });
+    }
+    initialMembershipIds = (memRes.data || []).map((m: any) => m.collab_id);
+  }
+
+  return { initialCollabs: collabsData || [], initialStats: stats, initialRequestStatuses, initialMembershipIds };
 }
 
 // --- Channels Data ---

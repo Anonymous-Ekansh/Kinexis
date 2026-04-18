@@ -13,7 +13,7 @@ export default async function CollabsPage() {
   }
 
   const { getCollabsData } = await import('@/lib/server-fetchers');
-  const collabsData = await getCollabsData();
+  const collabsData = await getCollabsData(user.id);
 
   return (
     <>
