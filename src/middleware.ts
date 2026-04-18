@@ -3,9 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
-    request: {
-      headers: request.headers,
-    },
+    request: { headers: request.headers },
   });
 
   const supabase = createServerClient(
@@ -20,9 +18,7 @@ export async function middleware(request: NextRequest) {
           cookiesToSet.forEach(({ name, value, options }) =>
             request.cookies.set(name, value)
           );
-          supabaseResponse = NextResponse.next({
-            request,
-          });
+          supabaseResponse = NextResponse.next({ request });
           cookiesToSet.forEach(({ name, value, options }) =>
             supabaseResponse.cookies.set(name, value, options)
           );
@@ -31,9 +27,7 @@ export async function middleware(request: NextRequest) {
     }
   );
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { data: { user } } = await supabase.auth.getUser();
 
   const isAuthRoute =
     request.nextUrl.pathname.startsWith("/login") ||
@@ -41,7 +35,11 @@ export async function middleware(request: NextRequest) {
     request.nextUrl.pathname.startsWith("/auth/callback");
 
   if (!user && !isAuthRoute && request.nextUrl.pathname !== "/") {
-    return NextResponse.redirect(new URL("/login", request.url));
+    const redirectResponse = NextResponse.redirect(new URL("/login", request.url));
+    supabaseResponse.cookies.getAll().forEach(cookie => {
+      redirectResponse.cookies.set(cookie.name, cookie.value);
+    });
+    return redirectResponse;
   }
 
   if (user) {
@@ -54,21 +52,31 @@ export async function middleware(request: NextRequest) {
         .select("id")
         .eq("id", user.id)
         .maybeSingle();
-      
       profileExists = !!profile;
-      
       if (profileExists) {
-        // Cache the result in a cookie to avoid querying the database on every subsequent request
-        supabaseResponse.cookies.set("has_profile", "true", { path: "/", maxAge: 60 * 60 * 24 * 30 }); // 30 days
+        supabaseResponse.cookies.set("has_profile", "true", {
+          path: "/",
+          maxAge: 60 * 60 * 24 * 30,
+          httpOnly: true,
+          sameSite: "lax",
+        });
       }
     }
 
     if (!profileExists && request.nextUrl.pathname !== "/onboarding" && !isAuthRoute) {
-      return NextResponse.redirect(new URL("/onboarding", request.url));
+      const redirectResponse = NextResponse.redirect(new URL("/onboarding", request.url));
+      supabaseResponse.cookies.getAll().forEach(cookie => {
+        redirectResponse.cookies.set(cookie.name, cookie.value);
+      });
+      return redirectResponse;
     }
 
     if (profileExists && request.nextUrl.pathname === "/onboarding") {
-      return NextResponse.redirect(new URL("/discover", request.url));
+      const redirectResponse = NextResponse.redirect(new URL("/discover", request.url));
+      supabaseResponse.cookies.getAll().forEach(cookie => {
+        redirectResponse.cookies.set(cookie.name, cookie.value);
+      });
+      return redirectResponse;
     }
   }
 
