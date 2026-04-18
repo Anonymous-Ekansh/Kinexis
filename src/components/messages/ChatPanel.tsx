@@ -1,4 +1,6 @@
 "use client";
+import Image from "next/image";
+
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { fetchMessages, sendMessage, markMessagesRead, checkBlocked, blockUser, unblockUser, deleteConversationForUser } from "@/lib/messages/queries";

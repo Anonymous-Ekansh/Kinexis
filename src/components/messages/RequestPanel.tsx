@@ -1,7 +1,8 @@
 "use client";
+import Image from "next/image";
+
 
 import { useState } from "react";
-import Image from "next/image";
 import { createRequest, acceptRequest, declineRequest, deleteRequest, getOrCreateConversation } from "@/lib/messages/queries";
 
 function getInitials(name: string | null): string {

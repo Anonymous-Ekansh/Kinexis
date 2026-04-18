@@ -1,7 +1,8 @@
 "use client";
+import Image from "next/image";
+
 
 import { useEffect, useState } from "react";
-import Image from "next/image";
 import { supabase } from "@/lib/supabase";
 
 function getInitials(name: string | null): string {

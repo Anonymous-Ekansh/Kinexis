@@ -1,4 +1,6 @@
 "use client";
+import Image from "next/image";
+
 
 interface Props {
   message: any;

@@ -1,7 +1,8 @@
 "use client";
+import Image from "next/image";
+
 
 import { useState, useRef, useEffect } from "react";
-import Image from "next/image";
 
 function getInitials(name: string | null): string {
   if (!name) return "?";

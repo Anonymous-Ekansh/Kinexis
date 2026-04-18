@@ -1,7 +1,8 @@
 "use client";
+import Image from "next/image";
+
 
 import React, { useState, useEffect, useMemo, useCallback } from "react";
-import Image from "next/image";
 import { fetchConversations, fetchRequests, acceptRequest, declineRequest, getOrCreateConversation, getLastMessage, getUnreadCount, getPresence, searchUsers, markMessagesRead } from "@/lib/messages/queries";
 import { subscribeToConversations, subscribeToRequests, subscribeToAllMessages, subscribeToSentRequests, unsubscribe } from "@/lib/messages/realtime";
 import RequestCard from "./RequestCard";
