@@ -80,21 +80,13 @@ export default function FollowButton({ targetUserId, className = "", onFollowCha
           .delete()
           .eq("follower_id", user.id)
           .eq("following_id", targetUserId);
-        if (error) {
-          console.error("[FollowButton] Unfollow error:", error.message);
-          setIsFollowing(wasFollowing); // Revert on error
-          return;
-        }
+        if (error) throw error;
         logActivity({ userId: user.id, activityType: "unfollow_user", targetId: targetUserId, targetType: "user" });
       } else {
         const { error } = await supabase
           .from("follows")
           .insert({ follower_id: user.id, following_id: targetUserId });
-        if (error) {
-          console.error("[FollowButton] Follow error:", error.message);
-          setIsFollowing(wasFollowing); // Revert on error
-          return;
-        }
+        if (error) throw error;
         logActivity({ userId: user.id, activityType: "follow_user", targetId: targetUserId, targetType: "user" });
       }
 
@@ -103,8 +95,8 @@ export default function FollowButton({ targetUserId, className = "", onFollowCha
       }
 
       onFollowChange?.(nextState);
-    } catch (err) {
-      console.error("[FollowButton] handleFollow error:", err);
+    } catch (err: any) {
+      console.warn("Follow failed:", err.message || err);
       setIsFollowing(wasFollowing); // Revert on error
     } finally {
       setActionInProgress(false);
