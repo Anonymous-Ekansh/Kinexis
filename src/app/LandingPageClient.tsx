@@ -10,7 +10,47 @@ import ProfileCardStack from "./components/ProfileCardStack";
    DATA
    ═══════════════════════════════════════════ */
 
-// Hardcoded streams moved server-side
+interface StreamItem {
+  name: string;
+  count: string;
+  color: string;
+  tags: string[];
+}
+
+const streams: Record<string, StreamItem[]> = {
+  btech: [
+    { name: "Computer Science", count: "312 students", color: "var(--lime)", tags: ["React", "ML", "Open Source"] },
+    { name: "Electronics (ECE)", count: "245 students", color: "var(--cyan)", tags: ["Embedded", "VLSI", "IoT"] },
+    { name: "Mechanical", count: "198 students", color: "var(--purple)", tags: ["CAD", "Robotics", "Thermal"] },
+    { name: "Chemical Engg", count: "134 students", color: "var(--coral)", tags: ["Process", "Materials", "Bio"] },
+    { name: "Civil Engg", count: "167 students", color: "var(--lime)", tags: ["Structures", "GIS", "Env"] },
+    { name: "Biotechnology", count: "89 students", color: "var(--cyan)", tags: ["Lab", "Research", "Bio"] },
+  ],
+  bsc: [
+    { name: "BSc Physics", count: "89 students", color: "var(--cyan)", tags: ["Quantum", "Astrophysics", "Lab"] },
+    { name: "BSc Chemistry", count: "67 students", color: "var(--purple)", tags: ["Organic", "Analytical", "Lab"] },
+    { name: "BSc Mathematics", count: "76 students", color: "var(--lime)", tags: ["Stats", "ML", "Pure Maths"] },
+    { name: "BSc Economics", count: "88 students", color: "var(--coral)", tags: ["Macro", "Research", "Policy"] },
+    { name: "BSc IT / CS", count: "112 students", color: "var(--cyan)", tags: ["Dev", "Data", "Networks"] },
+    { name: "BSc Life Sciences", count: "54 students", color: "var(--purple)", tags: ["Botany", "Zoology", "Ecology"] },
+  ],
+  commerce: [
+    { name: "BMS", count: "143 students", color: "var(--lime)", tags: ["Marketing", "Ops", "Strategy"] },
+    { name: "Eco + Finance", count: "98 students", color: "var(--cyan)", tags: ["Investing", "FinTech", "Markets"] },
+    { name: "B.Com", count: "167 students", color: "var(--purple)", tags: ["Accounting", "Tax", "Audit"] },
+    { name: "Economics (Hons)", count: "112 students", color: "var(--coral)", tags: ["Research", "Policy", "Econometrics"] },
+    { name: "BAF", count: "76 students", color: "var(--lime)", tags: ["Finance", "Accounts", "Banking"] },
+    { name: "BMM", count: "89 students", color: "var(--cyan)", tags: ["Media", "PR", "Advertising"] },
+  ],
+  social: [
+    { name: "International Relations", count: "55 students", color: "var(--purple)", tags: ["MUN", "Policy", "Diplomacy"] },
+    { name: "Political Science", count: "72 students", color: "var(--coral)", tags: ["Governance", "Law", "Research"] },
+    { name: "Psychology", count: "94 students", color: "var(--cyan)", tags: ["Counselling", "Research", "Behaviour"] },
+    { name: "History", count: "48 students", color: "var(--lime)", tags: ["Archives", "Writing", "Research"] },
+    { name: "Sociology", count: "61 students", color: "var(--purple)", tags: ["Research", "Culture", "Policy"] },
+    { name: "English Literature", count: "83 students", color: "var(--coral)", tags: ["Writing", "Journalism", "Publishing"] },
+  ],
+};
 
 const interests = [
   { label: "Startups", color: "var(--lime)" },
@@ -101,15 +141,8 @@ function LogoSVG({
    MAIN PAGE COMPONENT
    ═══════════════════════════════════════════ */
 
-export default function LandingPageClient({ initialData }: { initialData: any }) {
+export default function Home() {
   const router = useRouter();
-  
-  const streams = initialData?.initialStreams || { btech: [], bsc: [], commerce: [], social: [] };
-  const events = initialData?.initialEvents || [];
-  const featuredEvent = events[0];
-  const regularEvents = events.slice(1);
-  const collabs = initialData?.initialCollabs || [];
-  const clubs = initialData?.initialClubs || [];
 
   /* ── state ── */
   const [introClass, setIntroClass] = useState("");
@@ -453,12 +486,12 @@ export default function LandingPageClient({ initialData }: { initialData: any })
             ))}
           </div>
           <div className="stream-grid reveal-grid" ref={streamGridRef} key={streamAnimKey}>
-            {currentStream.map((s: any, i: number) => (
+            {currentStream.map((s, i) => (
               <div className="scard" style={{ borderTopColor: s.color }} key={i}>
                 <div className="scard-name">{s.name}</div>
                 <div className="scard-count">{s.count}</div>
                 <div className="scard-tags">
-                  {s.tags.map((t: string) => (
+                  {s.tags.map((t) => (
                     <span className="scard-tag" key={t}>{t}</span>
                   ))}
                 </div>
@@ -475,26 +508,27 @@ export default function LandingPageClient({ initialData }: { initialData: any })
           <ProfileCardStack />
         </section>
 
-        {/* COLLABS */}
+        {/* PROJECTS */}
         <section className="sec">
-          <div className="eyebrow reveal" style={{ color: "var(--purple)" }}>Open Collabs</div>
+          <div className="eyebrow reveal" style={{ color: "var(--purple)" }}>Open Projects</div>
           <div className="sec-h reveal">Ideas looking for builders.</div>
-          <p className="sec-sub reveal">Real collabs from students across every stream — each one needs someone like you.</p>
+          <p className="sec-sub reveal">Real projects from students across every stream — each one needs someone like you.</p>
           <div className="projects-list reveal-list">
-            {collabs.map((p: any, i: number) => {
-              const borderColor = ["var(--lime)", "var(--cyan)", "var(--purple)", "var(--coral)"][i % 4];
-              const author = p.author ? `${p.author.full_name?.split(" ")[0]} · ${p.author.stream || ''}` : "Someone";
-              const openSpots = (p.spots_total || 2) - (p.spots_filled || 0);
-              return (
-              <div className="pj" style={{ borderLeftColor: borderColor }} key={i}>
+            {[
+              { name: "Campus food delivery app", meta: "Aryan S. · BTech CSE · 3 members so far", skills: ["Flutter", "UI Design", "Firebase"], badge: "Open", badgeColor: "var(--lime)", borderColor: "var(--lime)" },
+              { name: "Economics research — inflation & student spending", meta: "Priya K. · BSc Economics · 2 members so far", skills: ["Data Analysis", "Writing", "Excel"], badge: "Forming", badgeColor: "var(--cyan)", borderColor: "var(--cyan)" },
+              { name: "Campus MUN 2025 — organising committee", meta: "Aanya K. · Intl Relations · 4 members so far", skills: ["Event Mgmt", "Writing", "Logistics"], badge: "Active", badgeColor: "var(--purple)", borderColor: "var(--purple)" },
+              { name: "SIH 2025 — smart irrigation IoT system", meta: "Rohan V. · BTech ECE · 2 members so far", skills: ["IoT", "Python", "ML", "Hardware"], badge: "New", badgeColor: "var(--coral)", borderColor: "var(--coral)" },
+            ].map((p, i) => (
+              <div className="pj" style={{ borderLeftColor: p.borderColor }} key={i}>
                 <div className="pj-l">
-                  <div className="pj-name">{p.title}</div>
-                  <div className="pj-meta">{author} · {openSpots > 0 ? `${openSpots} spots open` : 'Full'}</div>
-                  <div className="pj-skills">{p.skills_required?.map((s: string) => <span className="pj-skill" key={s}>{s}</span>)}</div>
+                  <div className="pj-name">{p.name}</div>
+                  <div className="pj-meta">{p.meta}</div>
+                  <div className="pj-skills">{p.skills.map((s) => <span className="pj-skill" key={s}>{s}</span>)}</div>
                 </div>
-                <div className="pj-r"><Link href={`/collabs`} className="pj-badge" style={{ color: borderColor, textDecoration: 'none' }}>{p.status || "Open"}</Link></div>
+                <div className="pj-r"><span className="pj-badge" style={{ color: p.badgeColor }}>{p.badge}</span></div>
               </div>
-            )})}
+            ))}
           </div>
         </section>
 
@@ -505,57 +539,62 @@ export default function LandingPageClient({ initialData }: { initialData: any })
           <p className="sec-sub reveal">Discover events, workshops, hackathons and socials at your college.</p>
           <div className="events-grid reveal-grid">
             {/* Featured event */}
-            {featuredEvent && (
             <div className="ecard ecard-featured" style={{ borderTopColor: "var(--lime)" }}>
               <div className="ef-left">
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "12px" }}>
-                  <span className="ecard-badge" style={{ color: "var(--lime)" }}>FEATURED</span>
-                  <span className="ecard-date">{new Date(featuredEvent.event_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric'})}</span>
+                  <span className="ecard-badge" style={{ color: "var(--lime)" }}>FEATURED · HACKATHON</span>
+                  <span className="ecard-date">28 March 2025</span>
                 </div>
                 <div style={{ fontFamily: "var(--font-syne),'Syne',sans-serif", fontSize: "19px", fontWeight: 800, color: "#fff", lineHeight: 1.25, marginBottom: "8px" }}>
-                  {featuredEvent.title}
+                  Smart India Hackathon<br />2025 — Campus Round
                 </div>
-                <div style={{ fontSize: "12px", color: "var(--muted)", marginBottom: "16px" }}>Organised by {featuredEvent.organizer_name || featuredEvent.clubs?.name || "Campus Community"}</div>
+                <div style={{ fontSize: "12px", color: "var(--muted)", marginBottom: "16px" }}>Organised by E-Cell · Open to all streams</div>
                 <div className="ecard-footer">
                   <div style={{ display: "flex", alignItems: "center" }}>
                     <div className="ecard-avs">
-                      <div className="ecard-av" style={{ background: "var(--lime)" }}>{featuredEvent.title[0] || 'K'}</div>
+                      <div className="ecard-av" style={{ background: "var(--lime)" }}>A</div>
+                      <div className="ecard-av" style={{ background: "var(--cyan)" }}>P</div>
+                      <div className="ecard-av" style={{ background: "var(--purple)", color: "#fff" }}>R</div>
+                      <div className="ecard-av" style={{ background: "var(--coral)", color: "#fff" }}>S</div>
                     </div>
-                    <span className="ecard-going-text">{featuredEvent.rsvp_count || 0} going</span>
+                    <span className="ecard-going-text">48 students going</span>
                   </div>
-                  <Link href={`/events`} className="ecard-join" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center' }}>Register →</Link>
+                  <button className="ecard-join">Register →</button>
                 </div>
               </div>
               <div className="ef-right">
-                <div className="ef-num" style={{ color: "var(--lime)" }}>{new Date(featuredEvent.event_date).getDate()}</div>
-                <div className="ef-month">{new Date(featuredEvent.event_date).toLocaleDateString('en-GB', { month: 'short' }).toUpperCase()}</div>
-                <div className="ef-loc">{featuredEvent.start_time || "10:00 AM"}</div>
-                <div className="ef-loc">{featuredEvent.location || "Online"}</div>
+                <div className="ef-num" style={{ color: "var(--lime)" }}>28</div>
+                <div className="ef-month">MARCH</div>
+                <div className="ef-loc">10:00 AM</div>
+                <div className="ef-loc">Main Auditorium</div>
               </div>
             </div>
-            )}
 
             {/* Regular events */}
-            {regularEvents.map((ev: any, i: number) => {
-              const color = ["var(--cyan)", "var(--coral)", "var(--purple)", "var(--lime)"][i % 4];
-              return (
-              <div className="ecard" style={{ borderTopColor: color }} key={i}>
-                <div className="ecard-top"><span className="ecard-badge" style={{ color: color }}>{ev.event_type || "EVENT"}</span><span className="ecard-date">{new Date(ev.event_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</span></div>
+            {[
+              { type: "WORKSHOP", color: "var(--cyan)", date: "22 Mar", title: "Intro to ML for Non-CS Students", org: "Coding Club · Room 204", avs: [{ bg: "var(--cyan)", l: "M" }, { bg: "var(--purple)", l: "K", tc: "#fff" }], going: "22 going", btn: "RSVP →" },
+              { type: "SOCIAL", color: "var(--coral)", date: "25 Mar", title: "Interdepartmental Open Mic Night", org: "Music Club · Amphitheatre", avs: [{ bg: "var(--coral)", l: "R", tc: "#fff" }, { bg: "var(--lime)", l: "S" }, { bg: "var(--cyan)", l: "T" }], going: "67 going", btn: "RSVP →" },
+              { type: "TALK", color: "var(--purple)", date: "30 Mar", title: "From Campus to Startup: A Founder's Journey", org: "E-Cell · Seminar Hall", avs: [{ bg: "var(--purple)", l: "A", tc: "#fff" }, { bg: "var(--lime)", l: "B" }], going: "34 going", btn: "RSVP →" },
+            ].map((ev, i) => (
+              <div className="ecard" style={{ borderTopColor: ev.color }} key={i}>
+                <div className="ecard-top"><span className="ecard-badge" style={{ color: ev.color }}>{ev.type}</span><span className="ecard-date">{ev.date}</span></div>
                 <div className="ecard-body">
                   <div className="ecard-title">{ev.title}</div>
-                  <div className="ecard-org">{ev.organizer_name || ev.clubs?.name || "Campus Community"}</div>
+                  <div className="ecard-org">{ev.org}</div>
                   <div className="ecard-footer">
                     <div style={{ display: "flex", alignItems: "center" }}>
                       <div className="ecard-avs">
-                        <div className="ecard-av" style={{ background: color, color: "#111" }}>{ev.title[0] || '?'}</div>
+                        {ev.avs.map((a, j) => (
+                          <div className="ecard-av" style={{ background: a.bg, color: a.tc || "#111" }} key={j}>{a.l}</div>
+                        ))}
                       </div>
-                      <span className="ecard-going-text">{ev.rsvp_count || 0} going</span>
+                      <span className="ecard-going-text">{ev.going}</span>
                     </div>
-                    <button className="ecard-join">RSVP →</button>
+                    <button className="ecard-join">{ev.btn}</button>
                   </div>
                 </div>
               </div>
-            )})}
+            ))}
           </div>
         </section>
 
@@ -565,16 +604,24 @@ export default function LandingPageClient({ initialData }: { initialData: any })
           <div className="sec-h reveal">Find your club. Or start one.</div>
           <p className="sec-sub reveal">40+ active student clubs across tech, arts, sports, culture, and entrepreneurship.</p>
           <div className="clubs-row reveal-grid">
-            {clubs.map((c: any, i: number) => {
-              const staticColors = ["var(--lime)", "var(--coral)", "var(--cyan)", "var(--purple)"];
-              const color = c.accent_color || staticColors[i % 4];
-              return (
-              <div className="club-card" style={{ borderTopColor: color }} key={c.id}>
+            {[
+              { name: "Coding Club", members: "234 members", tag: "Tech", color: "var(--lime)" },
+              { name: "Music Society", members: "187 members", tag: "Arts", color: "var(--coral)" },
+              { name: "E-Cell", members: "312 members", tag: "Startups", color: "var(--cyan)" },
+              { name: "Robotics Club", members: "143 members", tag: "Tech", color: "var(--purple)" },
+              { name: "Design Club", members: "98 members", tag: "Creative", color: "var(--lime)" },
+              { name: "Photography", members: "112 members", tag: "Creative", color: "var(--coral)" },
+              { name: "Finance Club", members: "167 members", tag: "Business", color: "var(--cyan)" },
+              { name: "Drama Society", members: "89 members", tag: "Arts", color: "var(--purple)" },
+              { name: "Sports Club", members: "276 members", tag: "Sports", color: "var(--lime)" },
+              { name: "MUN Club", members: "134 members", tag: "Policy", color: "var(--coral)" },
+            ].map((c, i) => (
+              <div className="club-card" style={{ borderTopColor: c.color }} key={i}>
                 <div className="club-name">{c.name}</div>
-                <div className="club-members">{c.follower_count || 0} members</div>
-                <span className="club-tag">{c.category || "General"}</span>
+                <div className="club-members">{c.members}</div>
+                <span className="club-tag">{c.tag}</span>
               </div>
-            )})}
+            ))}
           </div>
         </section>
 
