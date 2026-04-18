@@ -101,7 +101,15 @@ export default function TopNav() {
           {profile ? (
             <>
               <div className="pf-nav-profile" onClick={e => { e.stopPropagation(); setDdOpen(v => !v); }}>
-                <div className="pf-nav-av">{profile.avatar_url ? <Image src={profile.avatar_url} alt="" width={34} height={34} style={{ objectFit: "cover", width: "100%", height: "100%", borderRadius: "inherit" }} /> : getInitials(profile.full_name)}</div>
+                <div className="pf-nav-av" style={{ position: "relative" }}>
+                  <span>{getInitials(profile.full_name)}</span>
+                  {profile.avatar_url && (
+                    <Image src={profile.avatar_url} alt="" width={34} height={34} 
+                      style={{ objectFit: "cover", width: "100%", height: "100%", borderRadius: "inherit", position: "absolute", inset: 0 }}
+                      onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                    />
+                  )}
+                </div>
                 <div>
                   <div className="pf-nav-profile-name">{profile.full_name?.split(" ")[0] || "User"}</div>
                   <div className="pf-nav-profile-role">{profile.stream ? profile.stream.slice(0, 20) : ""}</div>

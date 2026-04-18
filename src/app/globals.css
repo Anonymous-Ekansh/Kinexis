@@ -2535,3 +2535,16 @@ footer {
 .animate-slide-in-right {
   animation: slide-in-right 0.25s ease-out;
 }
+
+/* ── FOLLOW BUTTON ── */
+.pf-btn-net-follow {
+  padding: 7px 12px; border-radius: 8px; font-size: 10px; font-weight: 700;
+  cursor: pointer; transition: all 0.2s; background: var(--lime); color: #111; border: 1.5px solid var(--lime);
+  font-family: var(--font-inter), sans-serif; min-width: 80px;
+}
+.pf-btn-net-follow.following {
+  background: transparent; border-color: var(--border2); color: var(--sub);
+}
+.pf-btn-net-follow.following:hover {
+  background: rgba(251,113,133,0.1); border-color: rgba(251,113,133,0.3); color: var(--coral);
+}

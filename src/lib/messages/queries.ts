@@ -203,13 +203,15 @@ export async function checkBlocked(userId: string, otherUserId: string): Promise
 
 /* ── Presence ── */
 export async function setPresence(userId: string, isOnline: boolean) {
-  try {
-    await supabase.from('user_presence').upsert({
-      user_id: userId,
-      is_online: isOnline,
-      last_seen: new Date().toISOString(),
-    });
-  } catch { /* fail silently */ }
+  const { error } = await supabase
+    .from('user_presence')
+    .upsert({ 
+      user_id: userId, 
+      is_online: isOnline, 
+      last_seen: new Date().toISOString() 
+    }, { onConflict: 'user_id' });
+  
+  if (error) console.warn('Presence error:', error.message);
 }
 
 export async function getPresence(userId: string) {

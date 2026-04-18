@@ -59,6 +59,7 @@ export default function FollowButton({ targetUserId, className = "", onFollowCha
     e.stopPropagation();
 
     if (!user) {
+      if (loading) return; // Wait for AuthContext
       window.location.href = "/login";
       return;
     }

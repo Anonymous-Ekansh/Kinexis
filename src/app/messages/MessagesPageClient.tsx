@@ -17,7 +17,11 @@ export default function MessagesPageClient({ userId, initialData }: { userId: st
 
   /* ── Presence ── */
   useEffect(() => {
-    setPresence(userId, true);
+    try {
+      setPresence(userId, true);
+    } catch (e) {
+      console.warn("Presence update failed:", e);
+    }
 
     const handleUnload = () => {
       // Send with keepalive
@@ -34,7 +38,11 @@ export default function MessagesPageClient({ userId, initialData }: { userId: st
     window.addEventListener('beforeunload', handleUnload);
     return () => {
       window.removeEventListener('beforeunload', handleUnload);
-      setPresence(userId, false);
+      try {
+        setPresence(userId, false);
+      } catch (e) {
+        console.warn("Presence teardown failed:", e);
+      }
     };
   }, [userId]);
 

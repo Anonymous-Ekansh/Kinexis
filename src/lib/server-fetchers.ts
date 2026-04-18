@@ -184,7 +184,20 @@ export async function getChannelsData(userId: string) {
   if (!memberRows || memberRows.length === 0) return { initialClubs: [], initialRoleByClub: {}, initialFollowingByClub: {}, initialActiveId: null, initialPosts: [], initialEmojiCounts: {}, initialUserReactions: {}, initialEvents: [], initialLeads: [], initialAllMembers: [], userRole };
 
   const clubIds = memberRows.map((r: any) => r.club_id);
-  const { data: clubsData } = await supabase.from("clubs").select("id, name, initials, accent_color, description, follower_count, pinned_message, category, type, tags").in("id", clubIds);
+  const activeId = clubIds.length > 0 ? clubIds[0] : null;
+
+  const [
+    { data: clubsData },
+    pdWrapper,
+    edWrapper,
+    mrWrapper
+  ] = await Promise.all([
+    supabase.from("clubs").select("id, name, initials, accent_color, description, follower_count, pinned_message, category, type, tags").in("id", clubIds),
+    activeId ? supabase.from("channel_posts").select("id, club_id, author_id, post_type, title, body, image_url, edited, metadata, created_at").eq("club_id", activeId).order("created_at", { ascending: false }) : Promise.resolve({ data: null }),
+    activeId ? supabase.from("channel_posts").select("id, title, metadata, created_at").eq("club_id", activeId).eq("post_type", "event").gte("metadata->>event_date", new Date().toISOString().split("T")[0]).order("created_at", { ascending: false }).limit(2) : Promise.resolve({ data: null }),
+    activeId ? supabase.from("club_members").select("user_id, role").eq("club_id", activeId).eq("role", "moderator") : Promise.resolve({ data: null })
+  ]);
+
   if (!clubsData) return { initialClubs: [], initialRoleByClub: {}, initialFollowingByClub: {}, initialActiveId: null, initialPosts: [], initialEmojiCounts: {}, initialUserReactions: {}, initialEvents: [], initialLeads: [], initialAllMembers: [], userRole };
 
   const rm: Record<string, string> = {};
@@ -194,16 +207,31 @@ export async function getChannelsData(userId: string) {
   const roles: Record<string, string> = {};
   const fs: Record<string, boolean> = {};
 
+  // Sort mappedClubs to ensure activeId matches the first returned club if reordered
+  let activeClubPos = -1;
+  const rawMapped: any[] = [];
   for (const c of clubsData) {
     const accent = (c.accent_color || "lime");
     const role = rm[c.id] || "follower";
-    mappedClubs.push({ id: c.id, name: c.name || "", initials: c.initials || getInitials(c.name || ""), accent, description: c.description || "", follower_count: c.follower_count || 0, pinned_message: c.pinned_message || null, category: c.category || "", type: c.type || "", tags: c.tags || [], role });
+    const mapped = { id: c.id, name: c.name || "", initials: c.initials || getInitials(c.name || ""), accent, description: c.description || "", follower_count: c.follower_count || 0, pinned_message: c.pinned_message || null, category: c.category || "", type: c.type || "", tags: c.tags || [], role };
+    rawMapped.push(mapped);
     roles[c.id] = role;
     fs[c.id] = true;
   }
-
-  const activeId = mappedClubs.length > 0 ? mappedClubs[0].id : null;
   
+  // Bring activeId to front so UI rendering matches expected top-tab
+  if (activeId) {
+    const actIdx = rawMapped.findIndex(c => c.id === activeId);
+    if (actIdx !== -1) {
+      mappedClubs.push(rawMapped[actIdx]);
+      for (let i = 0; i < rawMapped.length; i++) {
+        if (i !== actIdx) mappedClubs.push(rawMapped[i]);
+      }
+    } else {
+      mappedClubs.push(...rawMapped);
+    }
+  }
+
   let initialPosts: any[] = [];
   let initialEmojiCounts: Record<string, any> = {};
   let initialUserReactions: Record<string, any> = {};
@@ -211,42 +239,47 @@ export async function getChannelsData(userId: string) {
   let initialLeads: any[] = [];
   let initialAllMembers: any[] = [];
 
+  const pd = pdWrapper?.data;
+  const ed = edWrapper?.data;
+  const mr = mrWrapper?.data;
+
   if (activeId) {
-    const { data: pd } = await supabase.from("channel_posts").select("id, club_id, author_id, post_type, title, body, image_url, edited, metadata, created_at").eq("club_id", activeId).order("created_at", { ascending: false });
+    const aids = pd ? [...new Set(pd.map((p: any) => p.author_id).filter(Boolean))] : [];
+    const pids = pd ? pd.map((p: any) => p.id) : [];
+    const leadUids = (mr && mr.length > 0) ? mr.map((x: any) => x.user_id) : [];
+
+    const dependentPromises: any[] = [];
+    const authorsIndex = aids.length > 0 ? dependentPromises.push(supabase.from("users").select("id, full_name, avatar_url").in("id", aids)) - 1 : -1;
+    const reactionsIndex = pids.length > 0 ? dependentPromises.push(supabase.from("post_reactions").select("post_id, user_id, emoji").in("post_id", pids)) - 1 : -1;
+    const leadsIndex = leadUids.length > 0 ? dependentPromises.push(supabase.from("users").select("id, full_name, avatar_url, stream, year").in("id", leadUids)) - 1 : -1;
+
+    const dependentResults = await Promise.all(dependentPromises);
+
     if (pd) {
-      const aids = [...new Set(pd.map((p: any) => p.author_id).filter(Boolean))];
       let am: Record<string, any> = {};
-      if (aids.length > 0) {
-        const { data: ad } = await supabase.from("users").select("id, full_name, avatar_url").in("id", aids);
-        if (ad) for (const a of ad) am[a.id] = a;
+      if (authorsIndex !== -1 && dependentResults[authorsIndex].data) {
+        for (const a of dependentResults[authorsIndex].data) am[a.id] = a;
       }
       initialPosts = pd.map((p: any) => { const a = am[p.author_id] || {}; return { id: p.id, club_id: p.club_id, author_id: p.author_id, post_type: p.post_type || "update", title: p.title, body: p.body || "", image_url: p.image_url, edited: p.edited || false, metadata: p.metadata || {}, created_at: p.created_at, author_name: a.full_name || "Unknown", author_avatar: a.avatar_url, author_initials: getInitials(a.full_name || "") }; });
       
-      if (initialPosts.length > 0) {
-        const pids = initialPosts.map(p => p.id);
-        const { data: rx } = await supabase.from("post_reactions").select("post_id, user_id, emoji").in("post_id", pids);
-        if (rx) {
-          for (const r of rx) {
-            if (!initialEmojiCounts[r.post_id]) initialEmojiCounts[r.post_id] = {};
-            initialEmojiCounts[r.post_id][r.emoji] = (initialEmojiCounts[r.post_id][r.emoji] || 0) + 1;
-            if (r.user_id === userId) {
-              if (!initialUserReactions[r.post_id]) initialUserReactions[r.post_id] = new Set();
-              initialUserReactions[r.post_id].add(r.emoji);
-            }
+      if (reactionsIndex !== -1 && dependentResults[reactionsIndex].data) {
+        for (const r of dependentResults[reactionsIndex].data) {
+          if (!initialEmojiCounts[r.post_id]) initialEmojiCounts[r.post_id] = {};
+          initialEmojiCounts[r.post_id][r.emoji] = (initialEmojiCounts[r.post_id][r.emoji] || 0) + 1;
+          if (r.user_id === userId) {
+            if (!initialUserReactions[r.post_id]) initialUserReactions[r.post_id] = new Set();
+            initialUserReactions[r.post_id].add(r.emoji);
           }
         }
       }
     }
 
-    const { data: ed } = await supabase.from("channel_posts").select("id, title, metadata, created_at").eq("club_id", activeId).eq("post_type", "event").gte("metadata->>event_date", new Date().toISOString().split("T")[0]).order("created_at", { ascending: false }).limit(2);
     if (ed) initialEvents = ed.map((e: any) => ({ id: e.id, title: e.title, metadata: e.metadata || {}, created_at: e.created_at }));
 
-    const { data: mr } = await supabase.from("club_members").select("user_id, role").eq("club_id", activeId).eq("role", "moderator");
-    if (mr && mr.length > 0) {
-      const uids = mr.map((x: any) => x.user_id);
-      const { data: mu } = await supabase.from("users").select("id, full_name, avatar_url, stream, year").in("id", uids);
-      if (mu) initialLeads = mu.map((u: any) => ({ id: u.id, full_name: u.full_name || "Unknown", avatar_url: u.avatar_url, stream: u.stream || "", year: u.year || "", initials: getInitials(u.full_name || "") }));
+    if (leadsIndex !== -1 && dependentResults[leadsIndex].data) {
+      initialLeads = dependentResults[leadsIndex].data.map((u: any) => ({ id: u.id, full_name: u.full_name || "Unknown", avatar_url: u.avatar_url, stream: u.stream || "", year: u.year || "", initials: getInitials(u.full_name || "") }));
     }
+
     
     // Convert sets to arrays for serialization
     Object.keys(initialUserReactions).forEach(k => {

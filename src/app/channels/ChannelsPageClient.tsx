@@ -131,45 +131,96 @@ export default function ChannelsPageClient({ userId, initialData }: { userId: st
   const initialActiveIdRef = useRef(initialData?.initialActiveId);
   const initialLoadedRef = useRef(false);
 
-  // === POSTS ===
-  useEffect(() => { if (!activeId) return; let m = true; async function f() {
-    if (!initialLoadedRef.current && activeId === initialActiveIdRef.current) {
-        initialLoadedRef.current = true;
-        return;
-    }
-    setPostsLoading(true);
-    const { data: pd } = await supabase.from("channel_posts").select("id, club_id, author_id, post_type, title, body, image_url, edited, metadata, created_at").eq("club_id", activeId).order("created_at", { ascending: false });
-    if (!m) return; if (!pd) { setPosts([]); setPostsLoading(false); return; }
-    const aids = [...new Set(pd.map((p: any) => p.author_id).filter(Boolean))];
-    let am: Record<string, any> = {};
-    if (aids.length > 0) { const { data: ad } = await supabase.from("users").select("id, full_name, avatar_url").in("id", aids); if (ad) for (const a of ad) am[a.id] = a; }
-    const mapped: Post[] = pd.map((p: any) => { const a = am[p.author_id] || {}; return { id: p.id, club_id: p.club_id, author_id: p.author_id, post_type: p.post_type || "update", title: p.title, body: p.body || "", image_url: p.image_url, edited: p.edited || false, metadata: p.metadata || {}, created_at: p.created_at, author_name: a.full_name || "Unknown", author_avatar: a.avatar_url, author_initials: getInitials(a.full_name || "") }; });
-    if (m) { setPosts(mapped); setPostsLoading(false); if (mapped.length > 0) setLatestPostTime(prev => ({ ...prev, [activeId!]: mapped[0].created_at })); }
-    // Reactions
-    if (mapped.length > 0) { const pids = mapped.map(p => p.id);
-      const { data: rx } = await supabase.from("post_reactions").select("post_id, user_id, emoji").in("post_id", pids);
-      if (m && rx) { const ec: EmojiCounts = {}; const ur: UserReactions = {};
-        for (const r of rx) { if (!ec[r.post_id]) ec[r.post_id] = {}; ec[r.post_id][r.emoji] = (ec[r.post_id][r.emoji] || 0) + 1; if (r.user_id === userId) { if (!ur[r.post_id]) ur[r.post_id] = new Set(); ur[r.post_id].add(r.emoji); } }
-        setEmojiCounts(ec); setUserReactions(ur);
-      }
-    } else { setEmojiCounts({}); setUserReactions({}); }
-  } f(); return () => { m = false; }; }, [activeId, userId]);
-
-  // === RIGHT PANEL ===
-  const initialRpLoadedRef = useRef(false);
-  useEffect(() => { if (!activeId) return; let m = true; const club = clubs.find(c => c.id === activeId);
+  // === COMBINED FETCH (Posts + Right Panel) ===
+  useEffect(() => { 
+    if (!activeId) return; 
+    let m = true; 
+    
     async function f() {
-      if (!initialRpLoadedRef.current && activeId === initialActiveIdRef.current) {
-        initialRpLoadedRef.current = true;
-        return;
+      if (!initialLoadedRef.current && activeId === initialActiveIdRef.current) {
+          initialLoadedRef.current = true;
+          return;
       }
-      const { data: ed } = await supabase.from("channel_posts").select("id, title, metadata, created_at").eq("club_id", activeId).eq("post_type", "event").gte("metadata->>event_date", new Date().toISOString().split("T")[0]).order("created_at", { ascending: false }).limit(2);
-      if (m && ed) setEvents(ed.map((e: any) => ({ id: e.id, title: e.title, metadata: e.metadata || {}, created_at: e.created_at })));
-      const { data: mr } = await supabase.from("club_members").select("user_id, role").eq("club_id", activeId).eq("role", "moderator");
-      if (m && mr && mr.length > 0) { const uids = mr.map((x: any) => x.user_id); const { data: mu } = await supabase.from("users").select("id, full_name, avatar_url, stream, year").in("id", uids);
-        if (m && mu) setLeads(mu.map((u: any) => ({ id: u.id, full_name: u.full_name || "Unknown", avatar_url: u.avatar_url, stream: u.stream || "", year: u.year || "", initials: getInitials(u.full_name || "") })));
-      } else if (m) setLeads([]);
-    } f(); return () => { m = false; }; }, [activeId, clubs]);
+      setPostsLoading(true);
+
+      // 1. Parallelize independent queries
+      const [ 
+        { data: pd }, 
+        { data: ed }, 
+        { data: mr } 
+      ] = await Promise.all([
+        supabase.from("channel_posts").select("id, club_id, author_id, post_type, title, body, image_url, edited, metadata, created_at").eq("club_id", activeId).order("created_at", { ascending: false }),
+        supabase.from("channel_posts").select("id, title, metadata, created_at").eq("club_id", activeId).eq("post_type", "event").gte("metadata->>event_date", new Date().toISOString().split("T")[0]).order("created_at", { ascending: false }).limit(2),
+        supabase.from("club_members").select("user_id, role").eq("club_id", activeId).eq("role", "moderator")
+      ]);
+
+      if (!m) return; 
+      
+      // Immediately set independent events
+      if (ed) setEvents(ed.map((e: any) => ({ id: e.id, title: e.title, metadata: e.metadata || {}, created_at: e.created_at })));
+
+      if (!pd) { 
+        setPosts([]); setPostsLoading(false); 
+        if (!mr || mr.length === 0) setLeads([]);
+        return; 
+      }
+
+      // 2. Parallelize dependent queries (authors, reactions, lead users)
+      const aids = [...new Set(pd.map((p: any) => p.author_id).filter(Boolean))];
+      const pids = pd.map((p: any) => p.id);
+      const leadUids = (mr && mr.length > 0) ? mr.map((x: any) => x.user_id) : [];
+
+      const promises: any[] = [];
+      const authorsIndex = aids.length > 0 ? promises.push(supabase.from("users").select("id, full_name, avatar_url").in("id", aids)) - 1 : -1;
+      const reactionsIndex = pids.length > 0 ? promises.push(supabase.from("post_reactions").select("post_id, user_id, emoji").in("post_id", pids)) - 1 : -1;
+      const leadsIndex = leadUids.length > 0 ? promises.push(supabase.from("users").select("id, full_name, avatar_url, stream, year").in("id", leadUids)) - 1 : -1;
+
+      const results = await Promise.all(promises);
+      if (!m) return;
+
+      // Extract authors
+      let am: Record<string, any> = {};
+      if (authorsIndex !== -1 && results[authorsIndex].data) {
+        for (const a of results[authorsIndex].data) am[a.id] = a;
+      }
+
+      // Map and set posts
+      const mapped: Post[] = pd.map((p: any) => { 
+        const a = am[p.author_id] || {}; 
+        return { id: p.id, club_id: p.club_id, author_id: p.author_id, post_type: p.post_type || "update", title: p.title, body: p.body || "", image_url: p.image_url, edited: p.edited || false, metadata: p.metadata || {}, created_at: p.created_at, author_name: a.full_name || "Unknown", author_avatar: a.avatar_url, author_initials: getInitials(a.full_name || "") }; 
+      });
+      
+      setPosts(mapped); 
+      setPostsLoading(false); 
+      if (mapped.length > 0) setLatestPostTime(prev => ({ ...prev, [activeId!]: mapped[0].created_at }));
+
+      // Extract and set reactions
+      if (reactionsIndex !== -1 && results[reactionsIndex].data) {
+        const ec: EmojiCounts = {}; const ur: UserReactions = {};
+        for (const r of results[reactionsIndex].data) { 
+          if (!ec[r.post_id]) ec[r.post_id] = {}; 
+          ec[r.post_id][r.emoji] = (ec[r.post_id][r.emoji] || 0) + 1; 
+          if (r.user_id === userId) { 
+            if (!ur[r.post_id]) ur[r.post_id] = new Set(); 
+            ur[r.post_id].add(r.emoji); 
+          } 
+        }
+        setEmojiCounts(ec); setUserReactions(ur);
+      } else { 
+        setEmojiCounts({}); setUserReactions({}); 
+      }
+
+      // Extract and set leads
+      if (leadsIndex !== -1 && results[leadsIndex].data) {
+        setLeads(results[leadsIndex].data.map((u: any) => ({ id: u.id, full_name: u.full_name || "Unknown", avatar_url: u.avatar_url, stream: u.stream || "", year: u.year || "", initials: getInitials(u.full_name || "") })));
+      } else {
+        setLeads([]);
+      }
+
+    } 
+    f(); 
+    return () => { m = false; }; 
+  }, [activeId, userId]);
 
   // === REALTIME ===
   useEffect(() => { if (!activeId) return;
@@ -279,7 +330,6 @@ export default function ChannelsPageClient({ userId, initialData }: { userId: st
         }
       }
       
-      router.refresh(); // Sync Next.js cache
     } catch (err: any) {
       console.error("Failed to toggle follow status:", err);
       // Revert optimistic UI
