@@ -137,32 +137,44 @@ export default function CollabsPageClient({ userId, initialData }: { userId: str
   const handleSubmit = async () => {
     if (!formTitle.trim()) return;
     setSubmitting(true);
-    const { data: user } = await supabase.from("users").select("stream, batch_year").eq("id", userId).single();
-    const { error } = await supabase.from("collabs").insert({
-      author_id: userId,
-      title: formTitle,
-      description: formDesc,
-      category: formCategory,
-      looking_for: formLookingFor,
-      tags: formTags,
-      spots_total: formSpots,
-      spots_filled: 1,
-      status: "open",
-      is_open_collab: formOpen,
-      stream: user?.stream || null,
-      batch_year: user?.batch_year || null,
-    });
-    setSubmitting(false);
-    if (error) {
-      alert("Failed to post collab: " + error.message);
-      return;
+    try {
+      const { data: user, error: userErr } = await supabase.from("users").select("stream, batch_year").eq("id", userId).single();
+      if (userErr) console.error("User fetch error:", userErr);
+      const { data: newCollab, error } = await supabase.from("collabs").insert({
+        author_id: userId,
+        title: formTitle,
+        description: formDesc,
+        category: formCategory,
+        looking_for: formLookingFor,
+        tags: formTags,
+        spots_total: formSpots,
+        spots_filled: 1,
+        status: "open",
+        is_open_collab: formOpen,
+        stream: user?.stream || null,
+        batch_year: user?.batch_year || null,
+      }).select("id").single();
+      if (error) {
+        alert("Failed to post collab: " + error.message);
+        return;
+      }
+      await supabase.from("collab_members").insert({
+        collab_id: newCollab.id,
+        user_id: userId,
+        role: "creator",
+      });
+      alert("Your collab is live! 🎉");
+      setShowModal(false);
+      setFormTitle(""); setFormDesc(""); setFormCategory("Social"); setFormLookingFor([]); setFormTags([]); setFormSpots(1); setFormOpen(true);
+      setOffset(0);
+      fetchCollabs();
+      fetchStats();
+    } catch (err: any) {
+      console.error("handleSubmit error:", err);
+      alert("Something went wrong. Please try again.");
+    } finally {
+      setSubmitting(false);
     }
-    alert("Your collab is live! 🎉");
-    setShowModal(false);
-    setFormTitle(""); setFormDesc(""); setFormCategory("Social"); setFormLookingFor([]); setFormTags([]); setFormSpots(1); setFormOpen(true);
-    setOffset(0);
-    fetchCollabs();
-    fetchStats();
   };
 
   // --- Part 1: Join button state ---
@@ -243,7 +255,7 @@ export default function CollabsPageClient({ userId, initialData }: { userId: str
 
     const { data, error } = await supabase.rpc("accept_collab_request", {
       p_request_id: requestId,
-      p_user_id: userId,
+      p_actor_id: userId,
     });
 
     if (error) {
@@ -280,7 +292,7 @@ export default function CollabsPageClient({ userId, initialData }: { userId: str
 
     const { data, error } = await supabase.rpc("decline_collab_request", {
       p_request_id: requestId,
-      p_user_id: userId,
+      p_actor_id: userId,
     });
 
     if (error) {
@@ -483,7 +495,7 @@ export default function CollabsPageClient({ userId, initialData }: { userId: str
       <div className="cb-filter-bar">
         <div className="cb-filter-inner">
           <div className="cb-filter-search">
-            <svg className="cb-search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+            <svg className="cb-search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35" /></svg>
             <input type="text" placeholder="Search collabs, people, vibes..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
           </div>
           <div className="cb-filter-chips">
@@ -679,7 +691,7 @@ export default function CollabsPageClient({ userId, initialData }: { userId: str
             <textarea className="cb-modal-textarea" placeholder="Who are you looking for? What's the plan? Any requirements?" value={formDesc} onChange={e => setFormDesc(e.target.value)} />
 
             <label className="cb-modal-label">Looking for</label>
-            <input className="cb-modal-input" placeholder="e.g. Gym partner, Video editor, Anyone fun (press Enter)" value={formLookingInput} onChange={e => setFormLookingInput(e.target.value)} onKeyDown={e => { if (e.key === "Enter" || e.key === ",") { e.preventDefault(); addTag("looking", formLookingInput); }}} />
+            <input className="cb-modal-input" placeholder="e.g. Gym partner, Video editor, Anyone fun (press Enter)" value={formLookingInput} onChange={e => setFormLookingInput(e.target.value)} onKeyDown={e => { if (e.key === "Enter" || e.key === ",") { e.preventDefault(); addTag("looking", formLookingInput); } }} />
             {formLookingFor.length > 0 && (
               <div className="cb-modal-tags">
                 {formLookingFor.map((t, i) => <span key={i} className="cb-modal-tag">{t}<button onClick={() => setFormLookingFor(prev => prev.filter((_, j) => j !== i))}>×</button></span>)}
@@ -687,7 +699,7 @@ export default function CollabsPageClient({ userId, initialData }: { userId: str
             )}
 
             <label className="cb-modal-label">Tags</label>
-            <input className="cb-modal-input" placeholder="e.g. Morning, Adarsh Nagar, Reels (press Enter)" value={formTagInput} onChange={e => setFormTagInput(e.target.value)} onKeyDown={e => { if (e.key === "Enter" || e.key === ",") { e.preventDefault(); addTag("tag", formTagInput); }}} />
+            <input className="cb-modal-input" placeholder="e.g. Morning, Adarsh Nagar, Reels (press Enter)" value={formTagInput} onChange={e => setFormTagInput(e.target.value)} onKeyDown={e => { if (e.key === "Enter" || e.key === ",") { e.preventDefault(); addTag("tag", formTagInput); } }} />
             {formTags.length > 0 && (
               <div className="cb-modal-tags">
                 {formTags.map((t, i) => <span key={i} className="cb-modal-tag">{t}<button onClick={() => setFormTags(prev => prev.filter((_, j) => j !== i))}>×</button></span>)}
