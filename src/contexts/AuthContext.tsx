@@ -28,16 +28,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     let mounted = true;
 
     async function getInitialSession() {
-      const { data } = await supabase.auth.getSession();
+      const { data: { user }, error } = await supabase.auth.getUser();
+      const { data: { session } } = await supabase.auth.getSession();
+      
       if (mounted) {
-        setSession(data.session);
-        setUser(data.session?.user ?? null);
+        setSession(session);
+        setUser(user);
         
-        if (data.session?.user) {
+        if (user) {
           const { data: profile } = await supabase
             .from('users')
             .select('id, stream')
-            .eq('id', data.session.user.id)
+            .eq('id', user.id)
             .single();
           setHasProfile(!!(profile && profile.stream));
         } else {

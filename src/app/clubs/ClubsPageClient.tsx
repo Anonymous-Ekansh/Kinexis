@@ -32,20 +32,11 @@ interface ClubsPageClientProps {
 
 export default function ClubsPageClient({ initialClubs, initialFollowedIds, userId }: ClubsPageClientProps) {
   const router = useRouter();
-  const hasInitialised = useRef(false);
   const [hoveredClubId, setHoveredClubId] = useState<string | null>(null);
   
-  // Data State — initialized from server props, no useEffect needed
-  const [clubs, setClubs] = useState<Club[]>(initialClubs);
-  const [followedIds, setFollowedIds] = useState<Set<string>>(new Set(initialFollowedIds));
-
-  // Sync state when router.refresh() pulls new props
-  useEffect(() => {
-    if (hasInitialised.current) return;
-    setClubs(initialClubs);
-    setFollowedIds(new Set(initialFollowedIds));
-    hasInitialised.current = true;
-  }, [initialClubs, initialFollowedIds]);
+  // Data State — lazy initialized to only seed on mount, preventing server re-fetch overwrites
+  const [clubs, setClubs] = useState<Club[]>(() => initialClubs);
+  const [followedIds, setFollowedIds] = useState<Set<string>>(() => new Set(initialFollowedIds));
 
   // Filter State
   const [searchQuery, setSearchQuery] = useState("");
@@ -158,9 +149,12 @@ export default function ClubsPageClient({ initialClubs, initialFollowedIds, user
         logActivity({ userId, activityType: "unfollow_club", targetTitle: club.name, targetId: club.id, targetType: "club" });
       } else {
         // Follow
-        const { error: err1 } = await supabase
+        const insertRes = await supabase
           .from("club_members")
           .insert({ club_id: club.id, user_id: userId, role: "follower" });
+        
+        console.log("Supabase Insert Response:", insertRes);
+        const { error: err1 } = insertRes;
           
         if (err1) throw err1;
         
@@ -181,6 +175,8 @@ export default function ClubsPageClient({ initialClubs, initialFollowedIds, user
         if (c.id === club.id) return { ...c, follower_count: club.follower_count };
         return c;
       }));
+      
+      alert(`Follow failed: ${err.message}`);
     } finally {
       setLoadingClubs(prev => {
         const next = new Set(prev);

@@ -45,17 +45,29 @@ export async function middleware(request: NextRequest) {
   }
 
   if (user) {
-    const { data: profile } = await supabase
-      .from("users")
-      .select("id")
-      .eq("id", user.id)
-      .maybeSingle();
+    const hasProfileCookie = request.cookies.get("has_profile")?.value === "true";
+    let profileExists = hasProfileCookie;
 
-    if (!profile && request.nextUrl.pathname !== "/onboarding" && !isAuthRoute) {
+    if (!hasProfileCookie) {
+      const { data: profile } = await supabase
+        .from("users")
+        .select("id")
+        .eq("id", user.id)
+        .maybeSingle();
+      
+      profileExists = !!profile;
+      
+      if (profileExists) {
+        // Cache the result in a cookie to avoid querying the database on every subsequent request
+        supabaseResponse.cookies.set("has_profile", "true", { path: "/", maxAge: 60 * 60 * 24 * 30 }); // 30 days
+      }
+    }
+
+    if (!profileExists && request.nextUrl.pathname !== "/onboarding" && !isAuthRoute) {
       return NextResponse.redirect(new URL("/onboarding", request.url));
     }
 
-    if (profile && request.nextUrl.pathname === "/onboarding") {
+    if (profileExists && request.nextUrl.pathname === "/onboarding") {
       return NextResponse.redirect(new URL("/discover", request.url));
     }
   }

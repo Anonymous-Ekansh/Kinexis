@@ -22,20 +22,16 @@ export default function FollowButton({ targetUserId, className = "", onFollowCha
 
   const checkFollowStatus = useCallback(async (uid: string) => {
     try {
-      const { data, error } = await supabase.rpc("is_following", { 
-        f_id: uid, 
-        t_id: targetUserId 
-      });
+      const { data, error } = await supabase
+        .from("follows")
+        .select("follower_id")
+        .eq("follower_id", uid)
+        .eq("following_id", targetUserId)
+        .maybeSingle();
+
       if (error) {
-        console.error("[FollowButton] is_following RPC error:", error.message);
-        // Fall back: try direct query
-        const { data: directCheck } = await supabase
-          .from("follows")
-          .select("follower_id")
-          .eq("follower_id", uid)
-          .eq("following_id", targetUserId)
-          .maybeSingle();
-        setIsFollowing(!!directCheck);
+        console.error("[FollowButton] checkFollowStatus query error:", error.message);
+        setIsFollowing(false);
       } else {
         setIsFollowing(!!data);
       }
@@ -106,9 +102,6 @@ export default function FollowButton({ targetUserId, className = "", onFollowCha
       }
 
       onFollowChange?.(nextState);
-      
-      // Force Next.js router cache to refresh so subsequent back/forward navigation shows updated state
-      router.refresh();
     } catch (err) {
       console.error("[FollowButton] handleFollow error:", err);
       setIsFollowing(wasFollowing); // Revert on error
