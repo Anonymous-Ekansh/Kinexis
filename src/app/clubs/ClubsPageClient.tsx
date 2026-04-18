@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 import { logActivity } from "@/lib/logActivity";
@@ -32,6 +32,8 @@ interface ClubsPageClientProps {
 
 export default function ClubsPageClient({ initialClubs, initialFollowedIds, userId }: ClubsPageClientProps) {
   const router = useRouter();
+  const hasInitialised = useRef(false);
+  const [hoveredClubId, setHoveredClubId] = useState<string | null>(null);
   
   // Data State — initialized from server props, no useEffect needed
   const [clubs, setClubs] = useState<Club[]>(initialClubs);
@@ -39,8 +41,10 @@ export default function ClubsPageClient({ initialClubs, initialFollowedIds, user
 
   // Sync state when router.refresh() pulls new props
   useEffect(() => {
+    if (hasInitialised.current) return;
     setClubs(initialClubs);
     setFollowedIds(new Set(initialFollowedIds));
+    hasInitialised.current = true;
   }, [initialClubs, initialFollowedIds]);
 
   // Filter State
@@ -151,8 +155,6 @@ export default function ClubsPageClient({ initialClubs, initialFollowedIds, user
           
         if (err1) throw err1;
         
-        // Some setups don't allow followers to manually update clubs table count, so we ignore count update errors
-        await supabase.from("clubs").update({ follower_count: Math.max(0, (club.follower_count || 0) - 1) }).eq('id', club.id);
         logActivity({ userId, activityType: "unfollow_club", targetTitle: club.name, targetId: club.id, targetType: "club" });
       } else {
         // Follow
@@ -162,11 +164,8 @@ export default function ClubsPageClient({ initialClubs, initialFollowedIds, user
           
         if (err1) throw err1;
         
-        await supabase.from("clubs").update({ follower_count: (club.follower_count || 0) + 1 }).eq('id', club.id);
         logActivity({ userId, activityType: "follow_club", targetTitle: club.name, targetId: club.id, targetType: "club" });
       }
-
-      router.refresh(); // Invalidate Next.js client router cache
     } catch (err: any) {
       console.error("[ClubsPage] Failed to toggle follow:", err.message || err);
       
@@ -317,14 +316,22 @@ export default function ClubsPageClient({ initialClubs, initialFollowedIds, user
                         <div className="clubcard-mem">{club.follower_count || 0} followers</div>
                         <button 
                           className={`clubcard-btn ${isFollowing ? 'following' : ''}`}
-                          style={!isFollowing ? { 
-                            backgroundColor: getAccentRgba(colorMatch, 0.15), 
-                            color: colorMatch,
-                            borderColor: getAccentRgba(colorMatch, 0.3)
-                          } : {}}
+                          style={
+                            !isFollowing ? { 
+                              backgroundColor: getAccentRgba(colorMatch, 0.15), 
+                              color: colorMatch,
+                              borderColor: getAccentRgba(colorMatch, 0.3)
+                            } : isFollowing && hoveredClubId === club.id ? {
+                              backgroundColor: getAccentRgba("var(--coral)", 0.1),
+                              borderColor: getAccentRgba("var(--coral)", 0.3),
+                              color: "var(--coral)"
+                            } : {}
+                          }
+                          onMouseEnter={() => setHoveredClubId(club.id)}
+                          onMouseLeave={() => setHoveredClubId(null)}
                           onClick={() => toggleFollow(club)}
                         >
-                          {isFollowing ? 'Following' : 'Follow'}
+                          {!isFollowing ? 'Follow' : (hoveredClubId === club.id ? 'Unfollow' : 'Following')}
                         </button>
                       </div>
                     </div>
