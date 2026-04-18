@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
+import { useRouter } from "next/navigation";
 import { logActivity } from "@/lib/logActivity";
 import { useRouter } from "next/navigation";
 
@@ -159,6 +160,8 @@ export default function ClubsPageClient({ initialClubs, initialFollowedIds, user
         await supabase.from("clubs").update({ follower_count: (club.follower_count || 0) + 1 }).eq('id', club.id);
         logActivity({ userId, activityType: "follow_club", targetTitle: club.name, targetId: club.id, targetType: "club" });
       }
+
+      router.refresh(); // Invalidate Next.js client router cache
     } catch (err: any) {
       console.error("[ClubsPage] Failed to toggle follow:", err.message || err);
       

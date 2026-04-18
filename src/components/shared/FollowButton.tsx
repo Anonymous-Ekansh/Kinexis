@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import { logActivity } from "@/lib/logActivity";
 import { useAuth } from "@/contexts/AuthContext";
+import { useRouter } from "next/navigation";
 
 interface FollowButtonProps {
   targetUserId: string;
@@ -12,6 +13,7 @@ interface FollowButtonProps {
 }
 
 export default function FollowButton({ targetUserId, className = "", onFollowChange }: FollowButtonProps) {
+  const router = useRouter();
   const { user } = useAuth();
   const [isFollowing, setIsFollowing] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -104,6 +106,9 @@ export default function FollowButton({ targetUserId, className = "", onFollowCha
       }
 
       onFollowChange?.(nextState);
+      
+      // Force Next.js router cache to refresh so subsequent back/forward navigation shows updated state
+      router.refresh();
     } catch (err) {
       console.error("[FollowButton] handleFollow error:", err);
       setIsFollowing(wasFollowing); // Revert on error

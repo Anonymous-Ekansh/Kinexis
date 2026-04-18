@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { supabase } from "@/lib/supabase";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import "./events.css";
 
@@ -10,6 +11,7 @@ function getInitials(name: string | null): string {
   return name.split(" ").map(w => w[0]).join("").toUpperCase().slice(0, 2);
 }
 function InterestButton({ eventId, userId, initialCount, initialInterested }: { eventId: string; userId: string; initialCount: number; initialInterested: boolean }) {
+  const router = useRouter();
   const [isInterested, setIsInterested] = useState(initialInterested);
   const [count, setCount] = useState(initialCount);
 
@@ -36,6 +38,7 @@ function InterestButton({ eventId, userId, initialCount, initialInterested }: { 
         // Revert UI on error
         setIsInterested(true);
         setCount(prev => prev + 1);
+        return;
       }
     } else {
       // Add interest
@@ -48,8 +51,12 @@ function InterestButton({ eventId, userId, initialCount, initialInterested }: { 
         // Revert UI on error
         setIsInterested(false);
         setCount(prev => prev - 1);
+        return;
       }
     }
+    
+    // Invalidate Next.js router cache to ensure subsequent navigations are fresh
+    router.refresh();
   };
 
   return (
