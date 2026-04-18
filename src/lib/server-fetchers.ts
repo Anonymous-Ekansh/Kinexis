@@ -7,7 +7,7 @@ export async function getFeedData(userId: string) {
 
   // Phase 1: All independent queries in parallel
   const [postsRes, allVotesRes, allPostsRes, trendingRes, profileRes] = await Promise.all([
-    supabase.from("public_feed_posts").select("id, user_id, title, body, tags, image_url, is_anonymous, comment_count, created_at").order("created_at", { ascending: false }).limit(50),
+    supabase.from("public_feed_posts").select("id, user_id, post_type, title, body, tags, image_url, is_anonymous, professor_name, subject, star_rating, created_at").order("created_at", { ascending: false }).limit(50),
     supabase.from("feed_votes").select("post_id, user_id, vote"),
     supabase.from("feed_posts").select("id, user_id"),
     supabase.from("feed_posts").select("tags").gte("created_at", weekAgo),
@@ -266,7 +266,7 @@ export async function getDiscoverData(userId: string) {
   const todayISO = new Date().toISOString().split("T")[0];
 
   const p_me = supabase.from("users").select("id, full_name, stream, year, avatar_url, interests, clubs").eq("id", userId).single();
-  const p_users = supabase.from("users").select("id, full_name, stream, year, avatar_url, follower_count, interests, clubs, created_at").neq("id", userId).limit(50);
+  const p_users = supabase.from("users").select("id, full_name, stream, year, avatar_url, interests, clubs, currently_focused_on, created_at").neq("id", userId).limit(50);
   const p_votes = supabase.from("feed_votes").select("post_id, vote");
   const p_posts = supabase.from("feed_posts").select("id, user_id");
   const p_collabs = supabase.from("collabs").select("id, title, category, description, looking_for, tags, spots_total, spots_filled, status, author:author_id(full_name)").eq("status", "open").order("created_at", { ascending: false }).limit(20);
@@ -346,13 +346,13 @@ export async function getMessagesData(userId: string) {
       .order('last_message_at', { ascending: false }),
     supabase
       .from('message_requests')
-      .select('id, sender_id, receiver_id, message, status, created_at')
+      .select('id, sender_id, receiver_id, initial_message, status, created_at')
       .eq('receiver_id', userId)
       .eq('status', 'pending')
       .order('created_at', { ascending: false }),
     supabase
       .from('message_requests')
-      .select('id, sender_id, receiver_id, message, status, created_at')
+      .select('id, sender_id, receiver_id, initial_message, status, created_at')
       .eq('sender_id', userId)
       .eq('status', 'pending')
       .order('created_at', { ascending: false }),
@@ -459,7 +459,7 @@ export async function getProfileData(profileId: string, viewerId: string | null)
     res_similarUsers,
   ] = await Promise.all([
     // 1. Profile
-    supabase.from("users").select("id, full_name, stream, year, batch_year, bio, avatar_url, cover_url, interests, clubs, created_at").eq("id", profileId).single(),
+    supabase.from("users").select("id, full_name, stream, year, batch_year, bio, avatar_url, cover_url, cover_position, interests, clubs, currently_focused_on, looking_for, created_at").eq("id", profileId).single(),
     // 2. Projects
     supabase.from("projects").select("id, title, description, tags, url, github_url, created_at, metadata").eq("user_id", profileId).order("created_at", { ascending: false }),
     // 3. Activity (RPC)

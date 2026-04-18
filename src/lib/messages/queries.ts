@@ -113,7 +113,7 @@ export async function getTotalUnreadCount(userId: string): Promise<number> {
 export async function fetchRequests(userId: string) {
   const { data, error } = await supabase
     .from('message_requests')
-    .select('id, sender_id, receiver_id, message, status, created_at')
+    .select('id, sender_id, receiver_id, initial_message, status, created_at')
     .eq('receiver_id', userId)
     .eq('status', 'pending')
     .order('created_at', { ascending: false });
@@ -124,7 +124,7 @@ export async function fetchRequests(userId: string) {
 export async function fetchSentRequests(userId: string) {
   const { data, error } = await supabase
     .from('message_requests')
-    .select('id, sender_id, receiver_id, message, status, created_at')
+    .select('id, sender_id, receiver_id, initial_message, status, created_at')
     .eq('sender_id', userId)
     .eq('status', 'pending')
     .order('created_at', { ascending: false });
