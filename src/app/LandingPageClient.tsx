@@ -453,12 +453,12 @@ export default function LandingPageClient({ initialData }: { initialData: any })
             ))}
           </div>
           <div className="stream-grid reveal-grid" ref={streamGridRef} key={streamAnimKey}>
-            {currentStream.map((s, i) => (
+            {currentStream.map((s: any, i: number) => (
               <div className="scard" style={{ borderTopColor: s.color }} key={i}>
                 <div className="scard-name">{s.name}</div>
                 <div className="scard-count">{s.count}</div>
                 <div className="scard-tags">
-                  {s.tags.map((t) => (
+                  {s.tags.map((t: string) => (
                     <span className="scard-tag" key={t}>{t}</span>
                   ))}
                 </div>
