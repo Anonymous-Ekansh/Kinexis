@@ -28,12 +28,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     let mounted = true;
 
     async function getInitialSession() {
-      const { data: { user }, error } = await supabase.auth.getUser();
-      const { data: { session } } = await supabase.auth.getSession();
+      const { data: { user } } = await supabase.auth.getUser();
       
       if (mounted) {
-        setSession(session);
         setUser(user);
+        setSession(null); // session comes from onAuthStateChange
         
         if (user) {
           const { data: profile } = await supabase
