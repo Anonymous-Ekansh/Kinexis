@@ -4,7 +4,6 @@ import { useState, useMemo, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 import { logActivity } from "@/lib/logActivity";
-import { useRouter } from "next/navigation";
 
 // --- Types ---
 type Club = {
