@@ -4,11 +4,7 @@ import { useMemo } from "react";
 import { useRouter } from "next/navigation";
 
 /* ── Fallback data ── */
-const FALLBACK_PEOPLE = [
-  { id: "ff7d3892-d087-48d4-a83e-e9721a2bf722", initials: "NK", name: "Novesh kaushik", role: "Design · 2nd yr", bg: "var(--lime)", tags: ["ML", "Open Source"] },
-  { id: "13e95aad-0ece-4d25-9823-de1ed95fad0e", initials: "NK", name: "Novesh Kaushik 1", role: "ECE · 3rd yr", bg: "var(--cyan)", tags: ["Embedded", "Python"] },
-  { id: "ee4542f2-29fc-4b4c-9410-514d970fee1b", initials: "EK", name: "Ekansh", role: "Design · 1st yr", bg: "var(--purple)", tags: ["Figma", "Branding"] },
-];
+// Removed: FAKE IDs cause Foreign Key conflicts in the database when trying to follow.
 
 const ACCENT_COLORS = ["var(--lime)", "var(--cyan)", "var(--purple)", "var(--coral)"];
 
@@ -31,7 +27,7 @@ export default function DiscoverRightPanel({ initialData, userId }: { initialDat
 
   const people = useMemo(() => {
     if (!initialData?.initialRightPanelPeople || initialData.initialRightPanelPeople.length === 0) {
-      return FALLBACK_PEOPLE;
+      return [];
     }
     const myInterests = initialData.initialPeopleMatched || [];
     return initialData.initialRightPanelPeople.map((u: any, i: number) => {
@@ -75,20 +71,24 @@ export default function DiscoverRightPanel({ initialData, userId }: { initialDat
       {/* People like you, nearby */}
       <div className="disc-rp-label">PEOPLE LIKE YOU, NEARBY</div>
       <div className="disc-rp-people">
-        {people.map((p: any, i: number) => (
-          <div key={i} className="disc-rp-person cursor-pointer" onClick={() => navigateToProfile(p.id)}>
-            <div className="disc-rp-av" style={{ background: p.bg }}>{p.initials}</div>
-            <div className="disc-rp-person-info">
-              <div className="disc-rp-name">{p.name}</div>
-              <div className="disc-rp-role">{p.role}</div>
-              <div className="disc-rp-tags">
-                {p.tags.map((t: any) => (
-                  <span key={t} className="disc-rp-tag">{t}</span>
-                ))}
+        {people.length === 0 ? (
+          <div style={{ color: "var(--text-secondary, rgba(255,255,255,0.45))", fontSize: 13, padding: "12px 0" }}>No suggestions at the moment</div>
+        ) : (
+          people.map((p: any, i: number) => (
+            <div key={i} className="disc-rp-person cursor-pointer" onClick={() => navigateToProfile(p.id)}>
+              <div className="disc-rp-av" style={{ background: p.bg }}>{p.initials}</div>
+              <div className="disc-rp-person-info">
+                <div className="disc-rp-name">{p.name}</div>
+                <div className="disc-rp-role">{p.role}</div>
+                <div className="disc-rp-tags">
+                  {p.tags.map((t: any) => (
+                    <span key={t} className="disc-rp-tag">{t}</span>
+                  ))}
+                </div>
               </div>
             </div>
-          </div>
-        ))}
+          ))
+        )}
       </div>
 
       {/* Upcoming events */}

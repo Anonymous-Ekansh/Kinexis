@@ -16,11 +16,7 @@ interface DiscoverFeedProps {
 }
 
 /* ── FALLBACK DATA ── */
-const FALLBACK_PROFILES = [
-  { id: "ee4542f2-29fc-4b4c-9410-514d970fee1b", initials: "EK", name: "Ekansh", batch: "CS · 4th yr · IIT Delhi", vibe: "Core Founder of Kinexis", vibeBg: "rgba(158,240,26,.1)", vibeColor: "var(--lime)", tags: ["Product", "React", "Node.js"], accent: "var(--lime)" },
-  { id: "ff7d3892-d087-48d4-a83e-e9721a2bf722", initials: "NK", name: "Novesh kaushik", batch: "Design · 2nd yr · NID", vibe: "Design enthusiast", vibeBg: "rgba(34,211,238,.1)", vibeColor: "var(--cyan)", tags: ["UI/UX", "Figma"], accent: "var(--cyan)" },
-  { id: "13e95aad-0ece-4d25-9823-de1ed95fad0e", initials: "NK", name: "Novesh Kaushik 1", batch: "ECE · 3rd yr · BITS", vibe: "Tech explorer", vibeBg: "rgba(167,139,250,.1)", vibeColor: "var(--purple)", tags: ["Frontend", "React"], accent: "var(--purple)" },
-];
+// Removed: FAKE IDs cause Foreign Key conflicts in the database when trying to follow.
 
 /* ── Helpers ── */
 const ACCENT_COLORS = ["var(--lime)", "var(--cyan)", "var(--purple)", "var(--coral)"];
@@ -51,14 +47,10 @@ export default function DiscoverFeed({ initialData, userId, onSearchNavigate }: 
   const feedRef = useRef<HTMLDivElement>(null);
   
   const [allProfiles, setAllProfiles] = useState<any[]>(() => {
-    let combined = FALLBACK_PROFILES;
     if (initialData?.initialFeedProfiles?.length > 0) {
-      const mapped = initialData.initialFeedProfiles.map(mapUserToProfile);
-      const realIds = new Set(mapped.map((p: any) => p.id));
-      const fallbackFiltered = FALLBACK_PROFILES.filter(p => !realIds.has(p.id));
-      combined = [...mapped, ...fallbackFiltered].slice(0, 10);
+      return initialData.initialFeedProfiles.map(mapUserToProfile).slice(0, 10);
     }
-    return combined;
+    return [];
   });
 
   const [page, setPage] = useState(0);

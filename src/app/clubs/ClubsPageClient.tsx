@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 import { logActivity } from "@/lib/logActivity";
@@ -36,6 +36,12 @@ export default function ClubsPageClient({ initialClubs, initialFollowedIds, user
   // Data State — initialized from server props, no useEffect needed
   const [clubs, setClubs] = useState<Club[]>(initialClubs);
   const [followedIds, setFollowedIds] = useState<Set<string>>(new Set(initialFollowedIds));
+
+  // Sync state when router.refresh() pulls new props
+  useEffect(() => {
+    setClubs(initialClubs);
+    setFollowedIds(new Set(initialFollowedIds));
+  }, [initialClubs, initialFollowedIds]);
 
   // Filter State
   const [searchQuery, setSearchQuery] = useState("");

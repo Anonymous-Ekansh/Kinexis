@@ -53,6 +53,15 @@ export default function ChannelsPageClient({ userId, initialData }: { userId: st
   const [postsLoading, setPostsLoading] = useState(false);
   const [emojiCounts, setEmojiCounts] = useState<EmojiCounts>(initialData?.initialEmojiCounts || {});
   
+  useEffect(() => {
+    if (initialData) {
+      setUserRole(initialData.userRole || "user");
+      setClubs(initialData.initialClubs || []);
+      setRoleByClub(initialData.initialRoleByClub || {});
+      setFollowingByClub(initialData.initialFollowingByClub || {});
+    }
+  }, [initialData]);
+
   const processedUserReactions = useMemo(() => {
     if (!initialData?.initialUserReactions) return {};
     const res: UserReactions = {};
@@ -269,6 +278,8 @@ export default function ChannelsPageClient({ userId, initialData }: { userId: st
            if (updErr) console.error("[Supabase Error] clubs follower_count update:", updErr.message);
         }
       }
+      
+      router.refresh(); // Sync Next.js cache
     } catch (err: any) {
       console.error("Failed to toggle follow status:", err);
       // Revert optimistic UI
