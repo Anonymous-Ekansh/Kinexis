@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import { supabase } from "@/lib/supabase";
 
 function getInitials(name: string | null): string {
@@ -19,7 +20,7 @@ export default function ProfileCard({ userId, onClose }: Props) {
 
   useEffect(() => {
     async function load() {
-      const { data } = await supabase.from("users").select("*").eq("id", userId).single();
+      const { data } = await supabase.from("users").select("id, full_name, avatar_url, stream, batch_year, bio, interests").eq("id", userId).single();
       if (data) setProfile(data);
 
       // Stats
@@ -43,7 +44,7 @@ export default function ProfileCard({ userId, onClose }: Props) {
         <div className="msg-profile-top">
           <div className="msg-profile-av" style={{ background: 'rgba(158,240,26,0.15)', color: 'var(--lime)' }}>
             {profile.avatar_url
-              ? <img src={profile.avatar_url} alt="" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
+              ? <Image src={profile.avatar_url} alt="" width={80} height={80} style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
               : getInitials(profile.full_name)}
           </div>
           <div className="msg-profile-name">{profile.full_name || 'User'}</div>

@@ -235,7 +235,7 @@ export default function CollabsPageClient({ userId, initialData }: { userId: str
     // Always fetch members
     const { data: members } = await supabase
       .from("collab_members_with_profiles")
-      .select("*")
+      .select("user_id, role, full_name, avatar_url, stream, batch_year")
       .eq("collab_id", collab.id);
     if (members) setCollabMembers(members);
 
@@ -243,7 +243,7 @@ export default function CollabsPageClient({ userId, initialData }: { userId: str
     if (authorId === userId) {
       const { data: requests } = await supabase
         .from("pending_requests_with_profiles")
-        .select("*")
+        .select("request_id, user_id, message, created_at, full_name, avatar_url, stream, batch_year")
         .eq("collab_id", collab.id);
       if (requests) setPendingRequests(requests);
     }
@@ -251,6 +251,7 @@ export default function CollabsPageClient({ userId, initialData }: { userId: str
 
   // --- Part 4: Accept ---
   const handleAccept = useCallback(async (requestId: string) => {
+    if (!requestId) return;
     setRequestErrors(prev => ({ ...prev, [requestId]: "" }));
 
     const { data, error } = await supabase.rpc("accept_collab_request", {
@@ -280,7 +281,7 @@ export default function CollabsPageClient({ userId, initialData }: { userId: str
       // Refetch members
       const { data: members } = await supabase
         .from("collab_members_with_profiles")
-        .select("*")
+        .select("user_id, role, full_name, avatar_url, stream, batch_year")
         .eq("collab_id", detailCollab.id);
       if (members) setCollabMembers(members);
     }
@@ -288,6 +289,7 @@ export default function CollabsPageClient({ userId, initialData }: { userId: str
 
   // --- Part 5: Decline ---
   const handleDecline = useCallback(async (requestId: string) => {
+    if (!requestId) return;
     setRequestErrors(prev => ({ ...prev, [requestId]: "" }));
 
     const { data, error } = await supabase.rpc("decline_collab_request", {
@@ -794,18 +796,18 @@ export default function CollabsPageClient({ userId, initialData }: { userId: str
                   <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 14 }}>No pending requests.</div>
                 ) : (
                   pendingRequests.map((req: any) => (
-                    <div key={req.id} style={{ marginBottom: 12 }}>
+                    <div key={req.request_id || req.id} style={{ marginBottom: 12 }}>
                       <div className="cb-activity-item" style={{ borderBottom: "none", paddingBottom: 4 }}>
                         <div className="cb-activity-av" style={{ background: "rgba(158,240,26,0.15)", color: "var(--lime)" }}>{getInitials(req.full_name)}</div>
                         <div style={{ flex: 1 }}>
                           <div className="cb-activity-text"><b>{req.full_name || "Someone"}</b> · {req.stream || ""}{req.batch_year ? `, ${req.batch_year}` : ""}</div>
                           {req.message && <div style={{ fontSize: 12, color: "var(--sub)", marginTop: 4, fontStyle: "italic" }}>&ldquo;{req.message}&rdquo;</div>}
                           <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
-                            <button className="cb-btn-card view" onClick={() => handleDecline(req.id)}>Decline</button>
-                            <button className="cb-btn-card join" onClick={() => handleAccept(req.id)}>Accept</button>
+                            <button className="cb-btn-card view" onClick={() => handleDecline(req.request_id || req.id)}>Decline</button>
+                            <button className="cb-btn-card join" onClick={() => handleAccept(req.request_id || req.id)}>Accept</button>
                           </div>
-                          {requestErrors[req.id] && (
-                            <div style={{ fontSize: 11, color: "var(--coral)", marginTop: 4 }}>{requestErrors[req.id]}</div>
+                          {requestErrors[req.request_id || req.id] && (
+                            <div style={{ fontSize: 11, color: "var(--coral)", marginTop: 4 }}>{requestErrors[req.request_id || req.id]}</div>
                           )}
                         </div>
                       </div>

@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter, usePathname } from "next/navigation";
 import { MessageSquare } from "lucide-react";
 import { supabase } from "@/lib/supabase";
@@ -100,7 +101,7 @@ export default function TopNav() {
           {profile ? (
             <>
               <div className="pf-nav-profile" onClick={e => { e.stopPropagation(); setDdOpen(v => !v); }}>
-                <div className="pf-nav-av">{profile.avatar_url ? <img src={profile.avatar_url} alt="" /> : getInitials(profile.full_name)}</div>
+                <div className="pf-nav-av">{profile.avatar_url ? <Image src={profile.avatar_url} alt="" width={34} height={34} style={{ objectFit: "cover", width: "100%", height: "100%", borderRadius: "inherit" }} /> : getInitials(profile.full_name)}</div>
                 <div>
                   <div className="pf-nav-profile-name">{profile.full_name?.split(" ")[0] || "User"}</div>
                   <div className="pf-nav-profile-role">{profile.stream ? profile.stream.slice(0, 20) : ""}</div>

@@ -18,7 +18,7 @@ export default async function ClubsPage() {
 
   // Fetch clubs and followed IDs in parallel for better performance and consistency
   const [clubsRes, followRes] = await Promise.all([
-    supabase.from("clubs").select("*").order("follower_count", { ascending: false }),
+    supabase.from("clubs").select("id, name, initials, accent_color, description, follower_count, category, tags").order("follower_count", { ascending: false }),
     supabase.from("club_members").select("club_id").eq("user_id", user.id)
   ]);
 

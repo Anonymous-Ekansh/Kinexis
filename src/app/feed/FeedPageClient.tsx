@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState, useMemo, useCallback } from "react";
+import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { supabase } from "@/lib/supabase";
 import { logActivity } from "@/lib/logActivity";
 import "./feed.css";
@@ -156,7 +158,7 @@ export default function FeedPageClient({ userId, initialData }: { userId: string
   const openThread = async (post: any) => {
     setSelectedPost(post);
     setCommentLoading(true);
-    const { data } = await supabase.from("feed_comments").select("*").eq("post_id", post.id).order("created_at", { ascending: true });
+    const { data } = await supabase.from("feed_comments").select("id, user_id, content, created_at, is_anonymous").eq("post_id", post.id).order("created_at", { ascending: true });
     if (data) {
       // Resolve comment authors
       const uids = data.filter(c => !c.is_anonymous && c.user_id).map(c => c.user_id);
@@ -295,7 +297,7 @@ export default function FeedPageClient({ userId, initialData }: { userId: string
                   </div>
                 )}
                 <div className="fd-card-body-text" style={{ marginBottom: 16 }}>{selectedPost.body}</div>
-                {selectedPost.image_url && <img src={selectedPost.image_url} alt="" className="fd-card-img" />}
+                {selectedPost.image_url && <Image src={selectedPost.image_url} alt="" width={800} height={400} className="fd-card-img" style={{ height: "auto" }} />}
                 <div className="fd-card-footer">
                   {renderAuthor(selectedPost)}
                   <span className="fd-card-dot" />
@@ -320,7 +322,7 @@ export default function FeedPageClient({ userId, initialData }: { userId: string
                     <div key={c.id} className="fd-comment">
                       <div className="fd-comment-top">
                         <div className="fd-comment-av" style={{ background: "rgba(158,240,26,0.15)", color: "var(--lime)" }}>
-                          {c.author?.avatar_url ? <img src={c.author.avatar_url} alt="" style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover" }} /> : getInitials(c.author?.full_name || (c.is_anonymous ? null : null))}
+                          {c.author?.avatar_url ? <Image src={c.author.avatar_url} alt="" width={32} height={32} style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover" }} /> : getInitials(c.author?.full_name || (c.is_anonymous ? null : null))}
                         </div>
                         <span className="fd-comment-name">{c.is_anonymous ? "Anonymous 🎭" : (c.author?.full_name || "User")}</span>
                         <span className="fd-comment-time">{timeAgo(c.created_at)}</span>
@@ -340,7 +342,7 @@ export default function FeedPageClient({ userId, initialData }: { userId: string
               {/* Compose Bar */}
               <div className="fd-compose" onClick={() => setShowModal(true)}>
                 <div className="fd-compose-av">
-                  {profile?.avatar_url ? <img src={profile.avatar_url} alt="" /> : getInitials(profile?.full_name)}
+                  {profile?.avatar_url ? <Image src={profile.avatar_url} alt="" width={44} height={44} style={{ objectFit: 'cover' }} /> : getInitials(profile?.full_name)}
                 </div>
                 <div className="fd-compose-text">What&apos;s on your mind?</div>
                 <div className="fd-compose-btns">
@@ -439,7 +441,7 @@ export default function FeedPageClient({ userId, initialData }: { userId: string
                             </div>
                           )}
                           <div className="fd-card-body-text">{post.body}</div>
-                          {post.image_url && <img src={post.image_url} alt="" className="fd-card-img" />}
+                          {post.image_url && <Image src={post.image_url} alt="" width={800} height={400} className="fd-card-img" style={{ height: "auto" }} />}
                           <div className="fd-card-footer">
                             {renderAuthor(post)}
                             <span className="fd-card-dot" />
@@ -539,7 +541,7 @@ export default function FeedPageClient({ userId, initialData }: { userId: string
     return (
       <div className="fd-card-author">
         <div className="fd-card-author-av" style={{ background: "rgba(158,240,26,0.15)", color: "var(--lime)" }}>
-          {author?.avatar_url ? <img src={author.avatar_url} alt="" /> : getInitials(author?.full_name)}
+          {author?.avatar_url ? <Image src={author.avatar_url} alt="" width={44} height={44} style={{ borderRadius: '50%', objectFit: 'cover' }} /> : getInitials(author?.full_name)}
         </div>
         <span className="fd-card-author-name">{author?.full_name?.split(" ").map((w: string, i: number) => i === 0 ? w : w[0] + ".").join(" ") || "User"}</span>
       </div>

@@ -3,80 +3,71 @@ import { createClient } from "@/lib/supabase-server";
 // --- Feed Data ---
 export async function getFeedData(userId: string) {
   const supabase = await createClient();
-  const { data: postsData } = await supabase.from("public_feed_posts").select("*").order("created_at", { ascending: false }).limit(50);
-  let postsObj: any[] = [];
-  let voteMap: Record<string, { total: number; userVote: number }> = {};
-  
-  if (postsData) {
-    const userIds = postsData.filter((p: any) => !p.is_anonymous && p.user_id).map((p: any) => p.user_id);
-    const uniqueUserIds = [...new Set(userIds)];
-    let authorMap: Record<string, any> = {};
-
-    if (uniqueUserIds.length > 0) {
-      const { data: users } = await supabase.from("users").select("id, full_name, stream, year, avatar_url").in("id", uniqueUserIds);
-      if (users) users.forEach((u: any) => { authorMap[u.id] = u; });
-    }
-
-    postsObj = postsData.map((p: any) => ({
-      ...p,
-      author: p.is_anonymous ? null : (p.user_id ? authorMap[p.user_id] : null),
-    }));
-
-    const postIds = postsObj.map(p => p.id);
-    if (postIds.length > 0) {
-      const { data: votesData } = await supabase.from("feed_votes").select("post_id, user_id, vote").in("post_id", postIds);
-      postIds.forEach(id => { voteMap[id] = { total: 0, userVote: 0 }; });
-      if (votesData) {
-        votesData.forEach((v: any) => {
-          if (!voteMap[v.post_id]) voteMap[v.post_id] = { total: 0, userVote: 0 };
-          voteMap[v.post_id].total += v.vote;
-          if (v.user_id === userId) voteMap[v.post_id].userVote = v.vote;
-        });
-      }
-    }
-  }
-
-  const { data: allVotes } = await supabase.from("feed_votes").select("post_id, vote");
-  const { data: allPosts } = await supabase.from("feed_posts").select("id, user_id");
-  let leaderboard: any[] = [];
-  if (allVotes && allPosts) {
-    const postOwnerMap: Record<string, string> = {};
-    allPosts.forEach((p: any) => { postOwnerMap[p.id] = p.user_id; });
-
-    const userScores: Record<string, number> = {};
-    allVotes.forEach((v: any) => {
-      const owner = postOwnerMap[v.post_id];
-      if (owner && v.vote === 1) {
-        userScores[owner] = (userScores[owner] || 0) + 1;
-      }
-    });
-
-    const sorted = Object.entries(userScores).sort((a, b) => b[1] - a[1]).slice(0, 10);
-    const topUserIds = sorted.map(([uid]) => uid);
-
-    if (topUserIds.length > 0) {
-      const { data: users } = await supabase.from("users").select("id, full_name, stream, year").in("id", topUserIds);
-      const userMap: Record<string, any> = {};
-      if (users) users.forEach((u: any) => { userMap[u.id] = u; });
-
-      leaderboard = sorted.map(([uid, score]) => ({ ...userMap[uid], score, id: uid })).filter((u: any) => u.full_name);
-    }
-  }
-
   const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString();
-  const { data: trendingData } = await supabase.from("feed_posts").select("tags").gte("created_at", weekAgo);
-  let trendingTags: string[] = [];
-  if (trendingData) {
-    const freq: Record<string, number> = {};
-    trendingData.forEach((p: any) => {
-      (p.tags || []).forEach((t: string) => { freq[t] = (freq[t] || 0) + 1; });
-    });
-    trendingTags = Object.entries(freq).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([tag]) => tag);
+
+  // Phase 1: All independent queries in parallel
+  const [postsRes, allVotesRes, allPostsRes, trendingRes, profileRes] = await Promise.all([
+    supabase.from("public_feed_posts").select("id, user_id, title, body, tags, image_url, is_anonymous, comment_count, created_at").order("created_at", { ascending: false }).limit(50),
+    supabase.from("feed_votes").select("post_id, user_id, vote"),
+    supabase.from("feed_posts").select("id, user_id"),
+    supabase.from("feed_posts").select("tags").gte("created_at", weekAgo),
+    supabase.from("users").select("id, full_name, stream, year, avatar_url").eq("id", userId).single(),
+  ]);
+
+  const postsData = postsRes.data || [];
+  const allVotes = allVotesRes.data || [];
+  const allPosts = allPostsRes.data || [];
+
+  // Phase 2: Dependent queries — need user IDs from posts
+  const userIds = [...new Set(postsData.filter((p: any) => !p.is_anonymous && p.user_id).map((p: any) => p.user_id))];
+
+  // Build leaderboard from already-fetched allVotes + allPosts
+  const postOwnerMap: Record<string, string> = {};
+  allPosts.forEach((p: any) => { postOwnerMap[p.id] = p.user_id; });
+  const userScores: Record<string, number> = {};
+  allVotes.forEach((v: any) => {
+    const owner = postOwnerMap[v.post_id];
+    if (owner && v.vote === 1) userScores[owner] = (userScores[owner] || 0) + 1;
+  });
+  const topUserIds = Object.entries(userScores).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([uid]) => uid);
+
+  // Combine author IDs + leaderboard IDs for a single batch fetch
+  const allNeededUserIds = [...new Set([...userIds, ...topUserIds])];
+  let allFetchedUsers: Record<string, any> = {};
+  if (allNeededUserIds.length > 0) {
+    const { data: users } = await supabase.from("users").select("id, full_name, stream, year, avatar_url").in("id", allNeededUserIds);
+    if (users) users.forEach((u: any) => { allFetchedUsers[u.id] = u; });
   }
 
-  const { data: profile } = await supabase.from("users").select("id, full_name, stream, year, avatar_url").eq("id", userId).single();
+  // Assemble posts with authors
+  const postsObj = postsData.map((p: any) => ({
+    ...p,
+    author: p.is_anonymous ? null : (p.user_id ? allFetchedUsers[p.user_id] : null),
+  }));
 
-  return { initialPosts: postsObj, initialVotes: voteMap, initialLeaderboard: leaderboard, initialTrending: trendingTags, initialProfile: profile };
+  // Build vote map for displayed posts
+  const postIds = postsObj.map((p: any) => p.id);
+  const voteMap: Record<string, { total: number; userVote: number }> = {};
+  postIds.forEach((id: string) => { voteMap[id] = { total: 0, userVote: 0 }; });
+  allVotes.forEach((v: any) => {
+    if (voteMap[v.post_id] !== undefined) {
+      voteMap[v.post_id].total += v.vote;
+      if (v.user_id === userId) voteMap[v.post_id].userVote = v.vote;
+    }
+  });
+
+  // Assemble leaderboard
+  const sorted = Object.entries(userScores).sort((a, b) => b[1] - a[1]).slice(0, 10);
+  const leaderboard = sorted.map(([uid, score]) => ({ ...allFetchedUsers[uid], score, id: uid })).filter((u: any) => u.full_name);
+
+  // Trending tags
+  const freq: Record<string, number> = {};
+  (trendingRes.data || []).forEach((p: any) => {
+    (p.tags || []).forEach((t: string) => { freq[t] = (freq[t] || 0) + 1; });
+  });
+  const trendingTags = Object.entries(freq).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([tag]) => tag);
+
+  return { initialPosts: postsObj, initialVotes: voteMap, initialLeaderboard: leaderboard, initialTrending: trendingTags, initialProfile: profileRes.data };
 }
 
 // --- Events Data ---
@@ -193,7 +184,7 @@ export async function getChannelsData(userId: string) {
   if (!memberRows || memberRows.length === 0) return { initialClubs: [], initialRoleByClub: {}, initialFollowingByClub: {}, initialActiveId: null, initialPosts: [], initialEmojiCounts: {}, initialUserReactions: {}, initialEvents: [], initialLeads: [], initialAllMembers: [], userRole };
 
   const clubIds = memberRows.map((r: any) => r.club_id);
-  const { data: clubsData } = await supabase.from("clubs").select("*").in("id", clubIds);
+  const { data: clubsData } = await supabase.from("clubs").select("id, name, initials, accent_color, description, follower_count, pinned_message, category, type, tags").in("id", clubIds);
   if (!clubsData) return { initialClubs: [], initialRoleByClub: {}, initialFollowingByClub: {}, initialActiveId: null, initialPosts: [], initialEmojiCounts: {}, initialUserReactions: {}, initialEvents: [], initialLeads: [], initialAllMembers: [], userRole };
 
   const rm: Record<string, string> = {};
@@ -221,7 +212,7 @@ export async function getChannelsData(userId: string) {
   let initialAllMembers: any[] = [];
 
   if (activeId) {
-    const { data: pd } = await supabase.from("channel_posts").select("*").eq("club_id", activeId).order("created_at", { ascending: false });
+    const { data: pd } = await supabase.from("channel_posts").select("id, club_id, author_id, post_type, title, body, image_url, edited, metadata, created_at").eq("club_id", activeId).order("created_at", { ascending: false });
     if (pd) {
       const aids = [...new Set(pd.map((p: any) => p.author_id).filter(Boolean))];
       let am: Record<string, any> = {};
@@ -274,8 +265,8 @@ export async function getDiscoverData(userId: string) {
   const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString();
   const todayISO = new Date().toISOString().split("T")[0];
 
-  const p_me = supabase.from("users").select("*").eq("id", userId).single();
-  const p_users = supabase.from("users").select("*").neq("id", userId).limit(50);
+  const p_me = supabase.from("users").select("id, full_name, stream, year, avatar_url, interests, clubs").eq("id", userId).single();
+  const p_users = supabase.from("users").select("id, full_name, stream, year, avatar_url, follower_count, interests, clubs, created_at").neq("id", userId).limit(50);
   const p_votes = supabase.from("feed_votes").select("post_id, vote");
   const p_posts = supabase.from("feed_posts").select("id, user_id");
   const p_collabs = supabase.from("collabs").select("id, title, category, description, looking_for, tags, spots_total, spots_filled, status, author:author_id(full_name)").eq("status", "open").order("created_at", { ascending: false }).limit(20);
@@ -346,14 +337,30 @@ export async function getDiscoverData(userId: string) {
 export async function getMessagesData(userId: string) {
   const supabase = await createClient();
 
-  // 1. Fetch Conversations
-  const { data: convsData } = await supabase
-    .from('conversations')
-    .select('*')
-    .or(`user1_id.eq.${userId},user2_id.eq.${userId}`)
-    .order('last_message_at', { ascending: false });
+  // 1. Fetch all three sources in parallel
+  const [convsRes, reqsRes, sentReqsRes] = await Promise.all([
+    supabase
+      .from('conversations')
+      .select('id, user1_id, user2_id, last_message_at, deleted_by_user1, deleted_by_user2, created_at')
+      .or(`user1_id.eq.${userId},user2_id.eq.${userId}`)
+      .order('last_message_at', { ascending: false }),
+    supabase
+      .from('message_requests')
+      .select('id, sender_id, receiver_id, message, status, created_at')
+      .eq('receiver_id', userId)
+      .eq('status', 'pending')
+      .order('created_at', { ascending: false }),
+    supabase
+      .from('message_requests')
+      .select('id, sender_id, receiver_id, message, status, created_at')
+      .eq('sender_id', userId)
+      .eq('status', 'pending')
+      .order('created_at', { ascending: false }),
+  ]);
 
+  // 2. Process conversations — batch instead of loop
   let initialConversations: any[] = [];
+  const convsData = convsRes.data;
   if (convsData) {
     const validConvs = convsData.filter((c: any) => {
       if (c.user1_id === userId && c.deleted_by_user1) return false;
@@ -361,46 +368,74 @@ export async function getMessagesData(userId: string) {
       return true;
     });
 
-    initialConversations = await Promise.all(validConvs.map(async (c: any) => {
-      const otherId = c.user1_id === userId ? c.user2_id : c.user1_id;
-      const { data: user } = await supabase.from('users').select('id, full_name, avatar_url, stream, year').eq('id', otherId).single();
-      const { data: lastMessage } = await supabase.from('messages').select('*').eq('conversation_id', c.id).order('created_at', { ascending: false }).limit(1).maybeSingle();
-      const { count: unreadCount } = await supabase.from('messages').select('id', { count: 'exact', head: true }).eq('conversation_id', c.id).neq('sender_id', userId).eq('is_read', false);
-      const { data: presence } = await supabase.from('user_presence').select('*').eq('user_id', otherId).maybeSingle();
-      return { ...c, otherUser: user, lastMessage, unreadCount: unreadCount || 0, presence };
-    }));
+    if (validConvs.length > 0) {
+      // Collect all IDs we need
+      const convIds = validConvs.map((c: any) => c.id);
+      const otherUserIds = validConvs.map((c: any) => c.user1_id === userId ? c.user2_id : c.user1_id);
+      const uniqueOtherIds = [...new Set(otherUserIds)];
+
+      // Batch fetch: users, latest messages, unread counts, presence — all in parallel
+      const [usersRes, messagesRes, unreadRes, presenceRes] = await Promise.all([
+        supabase.from('users').select('id, full_name, avatar_url, stream, year').in('id', uniqueOtherIds),
+        supabase.from('messages').select('id, conversation_id, sender_id, content, created_at, is_read').in('conversation_id', convIds).order('created_at', { ascending: false }),
+        supabase.from('messages').select('conversation_id, sender_id, is_read').in('conversation_id', convIds).neq('sender_id', userId).eq('is_read', false),
+        supabase.from('user_presence').select('user_id, last_seen, is_online').in('user_id', uniqueOtherIds),
+      ]);
+
+      // Build lookup maps
+      const userMap: Record<string, any> = {};
+      (usersRes.data || []).forEach((u: any) => { userMap[u.id] = u; });
+
+      // Get latest message per conversation
+      const lastMsgMap: Record<string, any> = {};
+      (messagesRes.data || []).forEach((m: any) => {
+        if (!lastMsgMap[m.conversation_id]) lastMsgMap[m.conversation_id] = m;
+      });
+
+      // Count unread per conversation
+      const unreadMap: Record<string, number> = {};
+      (unreadRes.data || []).forEach((m: any) => {
+        unreadMap[m.conversation_id] = (unreadMap[m.conversation_id] || 0) + 1;
+      });
+
+      // Presence by user
+      const presenceMap: Record<string, any> = {};
+      (presenceRes.data || []).forEach((p: any) => { presenceMap[p.user_id] = p; });
+
+      // Assemble
+      initialConversations = validConvs.map((c: any) => {
+        const otherId = c.user1_id === userId ? c.user2_id : c.user1_id;
+        return {
+          ...c,
+          otherUser: userMap[otherId] || null,
+          lastMessage: lastMsgMap[c.id] || null,
+          unreadCount: unreadMap[c.id] || 0,
+          presence: presenceMap[otherId] || null,
+        };
+      });
+    }
   }
 
-  // 2. Fetch Requests
-  const { data: reqsData } = await supabase
-    .from('message_requests')
-    .select('*')
-    .eq('receiver_id', userId)
-    .eq('status', 'pending')
-    .order('created_at', { ascending: false });
-
+  // 3. Process requests — batch user lookups
   let initialRequests: any[] = [];
-  if (reqsData) {
-    initialRequests = await Promise.all(reqsData.map(async (r: any) => {
-      const { data: sender } = await supabase.from('users').select('id, full_name, avatar_url').eq('id', r.sender_id).single();
-      return { ...r, sender };
-    }));
+  const reqsData = reqsRes.data;
+  if (reqsData && reqsData.length > 0) {
+    const senderIds = [...new Set(reqsData.map((r: any) => r.sender_id))];
+    const { data: senders } = await supabase.from('users').select('id, full_name, avatar_url').in('id', senderIds);
+    const senderMap: Record<string, any> = {};
+    (senders || []).forEach((u: any) => { senderMap[u.id] = u; });
+    initialRequests = reqsData.map((r: any) => ({ ...r, sender: senderMap[r.sender_id] || null }));
   }
 
-  // 3. Fetch Sent Requests
-  const { data: sentReqsData } = await supabase
-    .from('message_requests')
-    .select('*')
-    .eq('sender_id', userId)
-    .eq('status', 'pending')
-    .order('created_at', { ascending: false });
-
+  // 4. Process sent requests — batch user lookups
   let initialSentRequests: any[] = [];
-  if (sentReqsData) {
-    initialSentRequests = await Promise.all(sentReqsData.map(async (r: any) => {
-      const { data: receiver } = await supabase.from('users').select('id, full_name, avatar_url').eq('id', r.receiver_id).single();
-      return { ...r, sender: receiver }; // RequestCard expects 'sender' to display the other person
-    }));
+  const sentReqsData = sentReqsRes.data;
+  if (sentReqsData && sentReqsData.length > 0) {
+    const receiverIds = [...new Set(sentReqsData.map((r: any) => r.receiver_id))];
+    const { data: receivers } = await supabase.from('users').select('id, full_name, avatar_url').in('id', receiverIds);
+    const receiverMap: Record<string, any> = {};
+    (receivers || []).forEach((u: any) => { receiverMap[u.id] = u; });
+    initialSentRequests = sentReqsData.map((r: any) => ({ ...r, sender: receiverMap[r.receiver_id] || null }));
   }
 
   return { initialConversations, initialRequests, initialSentRequests };
@@ -424,19 +459,19 @@ export async function getProfileData(profileId: string, viewerId: string | null)
     res_similarUsers,
   ] = await Promise.all([
     // 1. Profile
-    supabase.from("users").select("*").eq("id", profileId).single(),
+    supabase.from("users").select("id, full_name, stream, year, batch_year, bio, avatar_url, cover_url, interests, clubs, created_at").eq("id", profileId).single(),
     // 2. Projects
-    supabase.from("projects").select("*").eq("user_id", profileId).order("created_at", { ascending: false }),
+    supabase.from("projects").select("id, title, description, tags, url, github_url, created_at, metadata").eq("user_id", profileId).order("created_at", { ascending: false }),
     // 3. Activity (RPC)
     supabase.rpc("get_user_activity", { p_user_id: profileId }),
     // 4. Collabs
-    supabase.from("collabs").select("*").eq("author_id", profileId).order("created_at", { ascending: false }),
+    supabase.from("collabs").select("id, title, description, category, tags, spots_total, spots_filled, status, created_at").eq("author_id", profileId).order("created_at", { ascending: false }),
     // 5. Followers count
     supabase.rpc("get_followers_count", { target_user_id: profileId }),
     // 6. Following count
     supabase.rpc("get_following_count", { target_user_id: profileId }),
     // 7. Social links
-    supabase.from("social_links").select("*").eq("user_id", profileId),
+    supabase.from("social_links").select("platform, url").eq("user_id", profileId),
     // 8. Similar people candidates
     supabase.from("users").select("id, full_name, stream, interests, clubs, avatar_url").neq("id", profileId).limit(50),
   ]);
@@ -453,7 +488,7 @@ export async function getProfileData(profileId: string, viewerId: string | null)
     if (rpcErr || isF === null) {
       const { data: directCheck } = await supabase
         .from("follows")
-        .select("*")
+        .select("follower_id")
         .eq("follower_id", viewerId)
         .eq("following_id", profileId)
         .maybeSingle();

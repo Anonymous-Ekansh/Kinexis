@@ -29,7 +29,7 @@ export default function FollowButton({ targetUserId, className = "", onFollowCha
         // Fall back: try direct query
         const { data: directCheck } = await supabase
           .from("follows")
-          .select("*")
+          .select("follower_id")
           .eq("follower_id", uid)
           .eq("following_id", targetUserId)
           .maybeSingle();

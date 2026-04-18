@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { logActivity } from "@/lib/logActivity";
@@ -489,9 +490,10 @@ export default function ProfilePageClient({ profileId, viewerId, initialData }: 
         {!hasCover && <><div className="pf-banner-glow-l" /><div className="pf-banner-glow-r" /></>}
         
         {hasCover && (
-           <img 
+           <Image 
              src={profile.cover_url!} 
              alt="Cover" 
+             fill
              className={`pf-banner-img absolute inset-0 w-full h-full object-cover ${isAdjustingCover ? "cursor-grab active:cursor-grabbing" : ""}`}
              style={{ objectPosition: `center ${coverPosition}%` }}
              onPointerDown={handleCoverPointerDown}
@@ -582,7 +584,7 @@ export default function ProfilePageClient({ profileId, viewerId, initialData }: 
             >
               <div className="pf-big-avatar w-[84px] h-[84px] rounded-[20px] bg-[#9EF01A] flex items-center justify-center font-bold text-2xl text-black border-[3px] border-[#1C1C28] overflow-hidden">
                 {hasAvatar ? (
-                  <img src={profile.avatar_url!} alt="Avatar" className="w-full h-full object-cover" />
+                  <Image src={profile.avatar_url!} alt="Avatar" width={84} height={84} className="w-full h-full object-cover" />
                 ) : (
                   initials
                 )}
@@ -1031,7 +1033,7 @@ export default function ProfilePageClient({ profileId, viewerId, initialData }: 
                       <div key={p.id} className="pf-sim-card" style={{ borderLeftColor: color, cursor: 'pointer' }} onClick={() => router.push(`/profile/${p.id}`)}>
                         <div className="pf-sim-top">
                           {p.avatar_url ? (
-                            <div className="pf-sim-av" style={{ overflow: 'hidden' }}><img src={p.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /></div>
+                            <div className="pf-sim-av" style={{ overflow: 'hidden' }}><Image src={p.avatar_url} alt="" width={44} height={44} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /></div>
                           ) : (
                             <div className="pf-sim-av" style={{ background: color }}>{ini}</div>
                           )}

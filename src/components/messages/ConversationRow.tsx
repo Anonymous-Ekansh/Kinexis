@@ -30,7 +30,7 @@ export default function ConversationRow({ conversation, isActive, onClick }: Pro
       <div className="msg-conv-av-wrap">
         <div className="msg-conv-av" style={{ background: 'rgba(158,240,26,0.15)', color: 'var(--lime)' }}>
           {user?.avatar_url
-            ? <img src={user.avatar_url} alt="" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
+            ? <Image src={user.avatar_url} alt="" width={44} height={44} style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
             : getInitials(user?.full_name)}
         </div>
         {presence?.is_online && <div className="msg-conv-online-dot" />}

@@ -1,6 +1,7 @@
 "use client";
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
@@ -128,7 +129,7 @@ export default function ChannelsPageClient({ userId, initialData }: { userId: st
         return;
     }
     setPostsLoading(true);
-    const { data: pd } = await supabase.from("channel_posts").select("*").eq("club_id", activeId).order("created_at", { ascending: false });
+    const { data: pd } = await supabase.from("channel_posts").select("id, club_id, author_id, post_type, title, body, image_url, edited, metadata, created_at").eq("club_id", activeId).order("created_at", { ascending: false });
     if (!m) return; if (!pd) { setPosts([]); setPostsLoading(false); return; }
     const aids = [...new Set(pd.map((p: any) => p.author_id).filter(Boolean))];
     let am: Record<string, any> = {};
@@ -391,7 +392,7 @@ export default function ChannelsPageClient({ userId, initialData }: { userId: st
   // === EVENTS TAB — fetch event posts ===
   useEffect(() => { if (activeTab !== "Events" || !activeId) return; let m = true;
     async function f() {
-      const { data: ep } = await supabase.from("channel_posts").select("*").eq("club_id", activeId).eq("post_type", "event").order("created_at", { ascending: false });
+      const { data: ep } = await supabase.from("channel_posts").select("id, title, metadata, created_at").eq("club_id", activeId).eq("post_type", "event").order("created_at", { ascending: false });
       if (!m || !ep) return;
       const aids = [...new Set(ep.map((p: any) => p.author_id).filter(Boolean))];
       let am: Record<string, any> = {};
@@ -549,7 +550,7 @@ export default function ChannelsPageClient({ userId, initialData }: { userId: st
               </div>
               {post.title && <div style={{ fontFamily: "var(--font-syne), Syne, sans-serif", fontWeight: 800, fontSize: 15, color: "#fff", marginTop: 8, marginBottom: 4 }}>{post.title}</div>}
               {post.body && post.post_type !== "poll" && <div className="ch-post-body"><p>{post.body}</p></div>}
-              {post.image_url && <img className="ch-post-img" src={post.image_url} alt="" />}
+              {post.image_url && <Image width={800} height={400} className="ch-post-img" src={post.image_url} alt="" style={{ height: "auto" }} />}
               {post.edited && <span style={{ fontSize: 10, color: "rgba(255,255,255,0.3)", fontStyle: "italic" }}>edited</span>}
               {post.post_type === "event" && <div className="ch-event-card"><div className="ch-event-title" style={{ fontFamily: "var(--font-syne), Syne, sans-serif", fontWeight: 800 }}>{post.title || meta.event_title || "Event"}</div><div className="ch-event-meta" style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 10 }}>{(meta.event_date || meta.event_time) && <span style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14, fontWeight: 700, color: "#fff" }}><CalendarIcon size={16} /> {meta.event_date}{meta.event_date && meta.event_time ? " · " : ""}{meta.event_time}</span>}{meta.event_location && <span style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, fontWeight: 500, color: "rgba(255,255,255,0.7)" }}><MapPinIcon size={16} /> {meta.event_location}</span>}</div>{meta.event_tags?.length > 0 && <div className="ch-event-tags">{meta.event_tags.map((t: string) => <span key={t} className="ch-event-tag">{t}</span>)}</div>}<div className="ch-event-foot"><button type="button" className="ch-btn-rsvp">RSVP now</button></div></div>}
               {post.post_type === "poll" && meta.options && <div className="ch-poll" style={{ padding: "0 16px 14px" }}>

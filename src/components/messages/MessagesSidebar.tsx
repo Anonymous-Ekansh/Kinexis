@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from "react";
+import Image from "next/image";
 import { fetchConversations, fetchRequests, acceptRequest, declineRequest, getOrCreateConversation, getLastMessage, getUnreadCount, getPresence, searchUsers, markMessagesRead } from "@/lib/messages/queries";
 import { subscribeToConversations, subscribeToRequests, subscribeToAllMessages, subscribeToSentRequests, unsubscribe } from "@/lib/messages/realtime";
 import RequestCard from "./RequestCard";
@@ -159,7 +160,7 @@ export default function MessagesSidebar({ userId, activeConvId, onSelectConversa
               <div key={u.id} className="msg-conv-row" onClick={() => handleSelectUser(u)}>
                 <div className="msg-conv-av-wrap">
                   <div className="msg-conv-av" style={{ background: 'rgba(158,240,26,0.15)', color: 'var(--lime)' }}>
-                    {u.avatar_url ? <img src={u.avatar_url} alt="" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} /> : getInitials(u.full_name)}
+                    {u.avatar_url ? <Image src={u.avatar_url} alt="" width={32} height={32} style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} /> : getInitials(u.full_name)}
                   </div>
                 </div>
                 <div className="msg-conv-info">

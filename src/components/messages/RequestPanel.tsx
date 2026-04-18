@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { createRequest, acceptRequest, declineRequest, deleteRequest, getOrCreateConversation } from "@/lib/messages/queries";
 
 function getInitials(name: string | null): string {
@@ -103,7 +104,7 @@ export default function RequestPanel({ userId, request, draftUser, onResolved, o
         <div className="msg-req-profile">
           <div className="msg-req-huge-av">
             {targetUser?.avatar_url
-              ? <img src={targetUser.avatar_url} alt="" style={{ width: '100%', height: '100%', borderRadius: 'inherit', objectFit: 'cover' }} />
+              ? <Image src={targetUser.avatar_url} alt="" width={64} height={64} style={{ width: '100%', height: '100%', borderRadius: 'inherit', objectFit: 'cover' }} />
               : getInitials(targetUser?.full_name)}
             <div className="msg-req-huge-dot" />
           </div>

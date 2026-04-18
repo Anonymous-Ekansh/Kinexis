@@ -22,7 +22,7 @@ export default function MessageBubble({ message, isMine, showAvatar, otherUser, 
       {!isMine && showAvatar && (
         <div className="msg-bubble-av" style={{ background: 'rgba(167,139,250,0.15)', color: 'var(--purple)' }}>
           {otherUser?.avatar_url
-            ? <img src={otherUser.avatar_url} alt="" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
+            ? <Image src={otherUser.avatar_url} alt="" width={24} height={24} style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
             : getInitials(otherUser?.full_name)}
         </div>
       )}

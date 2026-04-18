@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import Image from "next/image";
 
 function getInitials(name: string | null): string {
   if (!name) return "?";
@@ -55,7 +56,7 @@ export default function ChatHeader({ otherUser, presence, iBlockedThem, theyBloc
         <div className="msg-chat-header-av-wrap" onClick={onProfileClick} style={{ cursor: 'pointer' }}>
           <div className="msg-chat-header-av" style={{ background: 'rgba(158,240,26,0.15)', color: 'var(--lime)' }}>
             {otherUser?.avatar_url
-              ? <img src={otherUser.avatar_url} alt="" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
+              ? <Image src={otherUser.avatar_url} alt="" width={44} height={44} style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
               : getInitials(otherUser?.full_name)}
           </div>
         </div>

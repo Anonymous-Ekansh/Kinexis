@@ -1,3 +1,5 @@
+export const revalidate = 60;
+
 import { createClient } from "@/lib/supabase-server"
 import { redirect } from "next/navigation"
 import TopNav from "@/components/TopNav"

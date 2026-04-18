@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
+import Image from "next/image";
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 import FollowButton from "../shared/FollowButton";
@@ -163,7 +164,7 @@ function UserCard({ user, onFollowChange }: { user: User, onFollowChange?: () =>
       <Link href={`/profile/${user.id}`} prefetch={false} className="flex items-center gap-3 flex-1 min-w-0">
         <div className="pf-network-av-lg">
           {user.avatar_url ? (
-            <img src={user.avatar_url} alt="" className="w-full h-full object-cover" />
+            <Image src={user.avatar_url} alt="" width={44} height={44} className="w-full h-full object-cover" style={{ borderRadius: 'inherit' }} />
           ) : (
             user.full_name?.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2)
           )}

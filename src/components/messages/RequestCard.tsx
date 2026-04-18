@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 
 function getInitials(name: string | null): string {
   if (!name) return "?";
@@ -21,7 +22,7 @@ export default function RequestCard({ request, onClick, isSent }: Props) {
       <div className="msg-conv-av-wrap">
         <div className="msg-conv-av" style={{ background: isSent ? 'rgba(255,255,255,0.05)' : 'rgba(167,139,250,0.15)', color: isSent ? '#ccc' : 'var(--purple)' }}>
           {user?.avatar_url
-            ? <img src={user.avatar_url} alt="" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
+            ? <Image src={user.avatar_url} alt="" width={44} height={44} style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
             : getInitials(user?.full_name)}
         </div>
       </div>

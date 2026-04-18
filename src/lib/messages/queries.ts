@@ -8,7 +8,7 @@ import { supabase } from '@/lib/supabase';
 export async function fetchConversations(userId: string) {
   const { data, error } = await supabase
     .from('conversations')
-    .select('*')
+    .select('id, user1_id, user2_id, last_message_at, deleted_by_user1, deleted_by_user2, created_at')
     .or(`user1_id.eq.${userId},user2_id.eq.${userId}`)
     .order('last_message_at', { ascending: false });
   if (error) throw error;
@@ -27,7 +27,7 @@ export async function getOrCreateConversation(userId: string, otherUserId: strin
   // Check existing
   const { data: existing } = await supabase
     .from('conversations')
-    .select('*')
+    .select('id, user1_id, user2_id, deleted_by_user1, deleted_by_user2')
     .eq('user1_id', user1)
     .eq('user2_id', user2)
     .single();
@@ -56,7 +56,7 @@ export async function getOrCreateConversation(userId: string, otherUserId: strin
 export async function fetchMessages(conversationId: string) {
   const { data, error } = await supabase
     .from('messages')
-    .select('*')
+    .select('id, conversation_id, sender_id, content, created_at, is_read')
     .eq('conversation_id', conversationId)
     .order('created_at', { ascending: true });
   if (error) throw error;
@@ -113,7 +113,7 @@ export async function getTotalUnreadCount(userId: string): Promise<number> {
 export async function fetchRequests(userId: string) {
   const { data, error } = await supabase
     .from('message_requests')
-    .select('*')
+    .select('id, sender_id, receiver_id, message, status, created_at')
     .eq('receiver_id', userId)
     .eq('status', 'pending')
     .order('created_at', { ascending: false });
@@ -124,7 +124,7 @@ export async function fetchRequests(userId: string) {
 export async function fetchSentRequests(userId: string) {
   const { data, error } = await supabase
     .from('message_requests')
-    .select('*')
+    .select('id, sender_id, receiver_id, message, status, created_at')
     .eq('sender_id', userId)
     .eq('status', 'pending')
     .order('created_at', { ascending: false });
@@ -215,7 +215,7 @@ export async function setPresence(userId: string, isOnline: boolean) {
 export async function getPresence(userId: string) {
   const { data } = await supabase
     .from('user_presence')
-    .select('*')
+    .select('user_id, last_seen, is_online')
     .eq('user_id', userId)
     .maybeSingle();
   return data;
@@ -244,7 +244,7 @@ export async function getUser(userId: string) {
 export async function getLastMessage(conversationId: string) {
   const { data } = await supabase
     .from('messages')
-    .select('*')
+    .select('id, conversation_id, sender_id, content, created_at, is_read')
     .eq('conversation_id', conversationId)
     .order('created_at', { ascending: false })
     .limit(1)
@@ -257,7 +257,7 @@ export async function deleteConversationForUser(convId: string, userId: string) 
     await supabase.rpc('delete_conversation_for_user', { conv_id: convId, user_id: userId });
   } catch {
     // Fallback: manually set the flag
-    const { data: conv } = await supabase.from('conversations').select('*').eq('id', convId).single();
+    const { data: conv } = await supabase.from('conversations').select('id, user1_id, user2_id').eq('id', convId).single();
     if (conv) {
       if (conv.user1_id === userId) await supabase.from('conversations').update({ deleted_by_user1: true }).eq('id', convId);
       else await supabase.from('conversations').update({ deleted_by_user2: true }).eq('id', convId);
