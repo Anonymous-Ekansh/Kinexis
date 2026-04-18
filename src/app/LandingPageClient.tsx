@@ -556,6 +556,7 @@ export default function LandingPageClient({ initialData }: { initialData: any })
                 </div>
               </div>
             )})}
+          </div>
         </section>
 
         {/* CLUBS */}
