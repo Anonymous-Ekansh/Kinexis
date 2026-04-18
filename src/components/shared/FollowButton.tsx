@@ -14,7 +14,7 @@ interface FollowButtonProps {
 
 export default function FollowButton({ targetUserId, className = "", onFollowChange }: FollowButtonProps) {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [isFollowing, setIsFollowing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [actionInProgress, setActionInProgress] = useState(false);
@@ -43,23 +43,25 @@ export default function FollowButton({ targetUserId, className = "", onFollowCha
   }, [targetUserId]);
 
   useEffect(() => {
-    if (user) {
-      if (user.id !== targetUserId) {
+    // Safety timeout — never stay disabled forever
+    const t = setTimeout(() => setLoading(false), 4000);
+    if (!authLoading) {
+      clearTimeout(t);
+      if (user && user.id !== targetUserId) {
         checkFollowStatus(user.id);
       } else {
         setLoading(false);
       }
-    } else {
-      setLoading(false);
     }
-  }, [user, targetUserId, checkFollowStatus]);
+    return () => clearTimeout(t);
+  }, [user, authLoading, targetUserId, checkFollowStatus]);
 
   const handleFollow = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
 
     if (!user) {
-      if (loading) return; // Wait for AuthContext
+      if (authLoading) return; // Wait for AuthContext to resolve
       window.location.href = "/login";
       return;
     }

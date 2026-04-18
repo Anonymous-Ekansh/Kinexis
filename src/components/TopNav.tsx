@@ -45,12 +45,14 @@ export default function TopNav() {
   const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user) { setProfile(null); return; }
+    let cancelled = false;
     (async () => {
       const { data: prof } = await supabase.from("users").select("id, full_name, stream, year, avatar_url").eq("id", user.id).single();
-      if (prof) setProfile(prof);
+      if (!cancelled && prof) setProfile(prof);
     })();
-  }, [user]);
+    return () => { cancelled = true; };
+  }, [user?.id]);
 
   /* Close dropdown */
   useEffect(() => {
