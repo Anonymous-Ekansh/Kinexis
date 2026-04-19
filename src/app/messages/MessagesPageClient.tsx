@@ -46,18 +46,8 @@ export default function MessagesPageClient({ userId, initialData }: { userId: st
     };
   }, [userId]);
 
-  const handleSelectConversation = async (conv: any) => {
-    let enriched = conv;
-    if (!conv.otherUser) {
-      const otherId = conv.user1_id === userId ? conv.user2_id : conv.user1_id;
-      const { data: user } = await supabase
-        .from('users')
-        .select('id, full_name, avatar_url, stream, year')
-        .eq('id', otherId)
-        .single();
-      enriched = { ...conv, otherUser: user };
-    }
-    setActiveConv(enriched);
+  const handleSelectConversation = (conv: any) => {
+    setActiveConv(conv);
     setActiveRequest(null);
     setDraftUser(null);
     setChatOpen(true);

@@ -57,12 +57,10 @@ export default function ProfileCard({
           Active now
         </div>
       )}
-      <div onClick={e => e.stopPropagation()}>
-        <FollowButton 
-          targetUserId={id} 
-          className="disc-pcard-connect" 
-        />
-      </div>
+      <FollowButton 
+        targetUserId={id} 
+        className="disc-pcard-connect" 
+      />
     </div>
   );
 }

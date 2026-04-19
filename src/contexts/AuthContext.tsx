@@ -26,39 +26,50 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     let mounted = true;
-    let resolved = false;
 
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (!mounted || resolved) return;
-      setUser(user);
-      if (user) {
-        supabase.from('users').select('id, stream').eq('id', user.id).single()
-          .then(({ data }) => {
-            if (mounted && !resolved) {
-              setHasProfile(!!(data && data.stream));
-              setLoading(false);
-            }
-          });
-      } else {
-        setHasProfile(false);
-        setLoading(false);
-      }
-    });
-
-    const { data: authListener } = supabase.auth.onAuthStateChange(
-      async (event, newSession) => {
-        if (!mounted) return;
-        resolved = true;
-        setSession(newSession);
-        setUser(newSession?.user ?? null);
-        if (newSession?.user) {
+    async function getInitialSession() {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (mounted) {
+        setUser(user);
+        setSession(null); // session comes from onAuthStateChange
+        
+        if (user) {
           const { data: profile } = await supabase
-            .from('users').select('id, stream').eq('id', newSession.user.id).single();
-          if (mounted) setHasProfile(!!(profile && profile.stream));
+            .from('users')
+            .select('id, stream')
+            .eq('id', user.id)
+            .single();
+          setHasProfile(!!(profile && profile.stream));
         } else {
           setHasProfile(false);
         }
-        if (mounted) setLoading(false);
+        
+        setLoading(false);
+      }
+    }
+
+    getInitialSession();
+
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      async (event, newSession) => {
+        if (mounted) {
+          setSession(newSession);
+          setUser(newSession?.user ?? null);
+          
+          if (newSession?.user) {
+            const { data: profile } = await supabase
+              .from('users')
+              .select('id, stream')
+              .eq('id', newSession.user.id)
+              .single();
+            setHasProfile(!!(profile && profile.stream));
+          } else {
+            setHasProfile(false);
+          }
+          
+          setLoading(false);
+        }
       }
     );
 
