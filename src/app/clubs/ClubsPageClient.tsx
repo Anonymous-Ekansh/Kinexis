@@ -34,9 +34,17 @@ export default function ClubsPageClient({ initialClubs, initialFollowedIds, user
   const router = useRouter();
   const [hoveredClubId, setHoveredClubId] = useState<string | null>(null);
   
-  // Data State — lazy initialized to only seed on mount, preventing server re-fetch overwrites
+  // Data State
   const [clubs, setClubs] = useState<Club[]>(() => initialClubs);
   const [followedIds, setFollowedIds] = useState<Set<string>>(() => new Set(initialFollowedIds));
+
+  useEffect(() => {
+    setClubs(initialClubs);
+  }, [initialClubs]);
+
+  useEffect(() => {
+    setFollowedIds(new Set(initialFollowedIds));
+  }, [initialFollowedIds]);
 
   // Filter State
   const [searchQuery, setSearchQuery] = useState("");
@@ -160,6 +168,9 @@ export default function ClubsPageClient({ initialClubs, initialFollowedIds, user
         
         logActivity({ userId, activityType: "follow_club", targetTitle: club.name, targetId: club.id, targetType: "club" });
       }
+      
+      // Tell Next.js router to drop cached payloads for this route
+      router.refresh();
     } catch (err: any) {
       console.error("[ClubsPage] Failed to toggle follow:", err.message || err);
       

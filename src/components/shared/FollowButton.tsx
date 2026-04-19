@@ -54,7 +54,7 @@ export default function FollowButton({ targetUserId, className = "", onFollowCha
       }
     }
     return () => clearTimeout(t);
-  }, [user, authLoading, targetUserId, checkFollowStatus]);
+  }, [user?.id, authLoading, targetUserId, checkFollowStatus]);
 
   const handleFollow = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -97,6 +97,9 @@ export default function FollowButton({ targetUserId, className = "", onFollowCha
       }
 
       onFollowChange?.(nextState);
+      
+      // Tell Next.js router to drop cached payloads for this route
+      router.refresh();
     } catch (err: any) {
       console.warn("Follow failed:", err.message || err);
       setIsFollowing(wasFollowing); // Revert on error

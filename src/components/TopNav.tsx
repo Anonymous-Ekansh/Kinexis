@@ -48,8 +48,16 @@ export default function TopNav() {
     if (!user) { setProfile(null); return; }
     let cancelled = false;
     (async () => {
-      const { data: prof } = await supabase.from("users").select("id, full_name, stream, year, avatar_url").eq("id", user.id).single();
-      if (!cancelled && prof) setProfile(prof);
+      try {
+        const { data: prof } = await supabase.from("users").select("id, full_name, stream, year, avatar_url").eq("id", user.id).single();
+        if (!cancelled) {
+          if (prof) setProfile(prof);
+          else setProfile({ id: user.id, full_name: "User", stream: "" });
+        }
+      } catch (err) {
+        console.warn("TopNav profile fetch error:", err);
+        if (!cancelled) setProfile({ id: user.id, full_name: "User", stream: "" });
+      }
     })();
     return () => { cancelled = true; };
   }, [user?.id]);

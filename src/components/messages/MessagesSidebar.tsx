@@ -75,18 +75,11 @@ export default function MessagesSidebar({ userId, activeConvId, onSelectConversa
     } catch (e) { console.error(e); }
   }, [userId]);
 
-  const initialLoadDone = React.useRef(false);
-
-  useEffect(() => { 
-    if (!initialLoadDone.current) {
-        initialLoadDone.current = true;
-        // Skip first fetch because we have initialData
-        return;
-    }
-    loadConversations(); 
-    loadRequests(); 
-    loadSentRequests(); 
-  }, [loadConversations, loadRequests, loadSentRequests, refreshKey]);
+  useEffect(() => {
+    loadConversations();
+    loadRequests();
+    loadSentRequests();
+  }, [refreshKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /* ── Realtime ── */
   useEffect(() => {
@@ -119,7 +112,11 @@ export default function MessagesSidebar({ userId, activeConvId, onSelectConversa
   };
 
   const handleSelectConv = async (conv: any) => {
-    await markMessagesRead(conv.id, userId);
+    try {
+      await markMessagesRead(conv.id, userId);
+    } catch (e) {
+      console.error("Failed to mark messages as read:", e);
+    }
     onSelectConversation(conv);
     loadConversations();
   };
