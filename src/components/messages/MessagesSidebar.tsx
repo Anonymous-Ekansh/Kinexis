@@ -34,6 +34,13 @@ export default function MessagesSidebar({ userId, activeConvId, onSelectConversa
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'chats'|'requests'>('chats');
 
+  useEffect(() => {
+    setConversations(initialData?.initialConversations || []);
+    setRequests(initialData?.initialRequests || []);
+    setSentRequests(initialData?.initialSentRequests || []);
+    setLoading(false);
+  }, [initialData]);
+
   /* ── Load conversations ── */
   const loadConversations = useCallback(async () => {
     try {
@@ -76,10 +83,11 @@ export default function MessagesSidebar({ userId, activeConvId, onSelectConversa
   }, [userId]);
 
   useEffect(() => {
+    setLoading(true);
     loadConversations();
     loadRequests();
     loadSentRequests();
-  }, [refreshKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [refreshKey, userId, loadConversations, loadRequests, loadSentRequests]);
 
   /* ── Realtime ── */
   useEffect(() => {
@@ -112,12 +120,12 @@ export default function MessagesSidebar({ userId, activeConvId, onSelectConversa
   };
 
   const handleSelectConv = async (conv: any) => {
+    onSelectConversation(conv);
     try {
       await markMessagesRead(conv.id, userId);
     } catch (e) {
       console.error("Failed to mark messages as read:", e);
     }
-    onSelectConversation(conv);
     loadConversations();
   };
 

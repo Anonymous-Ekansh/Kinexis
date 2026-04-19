@@ -44,6 +44,7 @@ function getBadgeStyle(type: string) { const t = type.toLowerCase(); if (t === "
 
 export default function ChannelsPageClient({ userId, initialData }: { userId: string, initialData: any }) {
   const router = useRouter();
+  const initialFollowingByClub = initialData?.initialFollowingByClub || {};
   const [userRole, setUserRole] = useState<string>(initialData?.userRole || "user");
   const [clubs, setClubs] = useState<SidebarClub[]>(initialData?.initialClubs || []);
   const [clubsLoading, setClubsLoading] = useState(false);
@@ -59,6 +60,16 @@ export default function ChannelsPageClient({ userId, initialData }: { userId: st
       setClubs(initialData.initialClubs || []);
       setRoleByClub(initialData.initialRoleByClub || {});
       setFollowingByClub(initialData.initialFollowingByClub || {});
+      setActiveId(initialData.initialActiveId || initialData.initialClubs?.[0]?.id || null);
+      setPosts(initialData.initialPosts || []);
+      setEmojiCounts(initialData.initialEmojiCounts || {});
+      setEvents(initialData.initialEvents || []);
+      setLeads(initialData.initialLeads || []);
+      setAllMembers(initialData.initialAllMembers || []);
+      setEventPosts([]);
+      setMenuOpen(null);
+      setManageOpen(false);
+      setPinnedExpanded(false);
     }
   }, [initialData]);
 
@@ -77,7 +88,7 @@ export default function ChannelsPageClient({ userId, initialData }: { userId: st
   const [allMembers, setAllMembers] = useState<MemberItem[]>([]);
   const [membersLoading, setMembersLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<TabId>("Posts");
-  const [followingByClub, setFollowingByClub] = useState<Record<string, boolean>>(initialData?.initialFollowingByClub || {});
+  const [followingByClub, setFollowingByClub] = useState<Record<string, boolean>>(initialFollowingByClub);
   const [notifyByClub, setNotifyByClub] = useState<Record<string, boolean>>({});
   const [pinnedExpanded, setPinnedExpanded] = useState(false);
   const [isNarrow, setIsNarrow] = useState(false);
@@ -117,6 +128,13 @@ export default function ChannelsPageClient({ userId, initialData }: { userId: st
   const [croppedBlob, setCroppedBlob] = useState<Blob | null>(null);
   // Event posts for Events tab
   const [eventPosts, setEventPosts] = useState<Post[]>([]);
+  const followingByClubRef = useRef<Record<string, boolean>>(initialFollowingByClub);
+  const clubsRef = useRef<SidebarClub[]>(initialData?.initialClubs || []);
+  const loadingChannelsFollowRef = useRef(false);
+
+  useEffect(() => {
+    setUserReactions(processedUserReactions);
+  }, [processedUserReactions]);
 
   useEffect(() => { const mq = window.matchMedia("(max-width: 767px)"); const a = () => { setIsNarrow(mq.matches); if (!mq.matches) setMobileFeed(false); }; a(); mq.addEventListener("change", a); return () => mq.removeEventListener("change", a); }, []);
 
@@ -299,35 +317,40 @@ export default function ChannelsPageClient({ userId, initialData }: { userId: st
 
   const [loadingChannelsFollow, setLoadingChannelsFollow] = useState(false);
 
+  useEffect(() => {
+    followingByClubRef.current = followingByClub;
+  }, [followingByClub]);
+
+  useEffect(() => {
+    clubsRef.current = clubs;
+  }, [clubs]);
+
+  useEffect(() => {
+    loadingChannelsFollowRef.current = loadingChannelsFollow;
+  }, [loadingChannelsFollow]);
+
   const toggleFollow = useCallback(async () => {
-    if (!userId || !activeId || loadingChannelsFollow) return; 
+    if (!userId || !activeId || loadingChannelsFollowRef.current) return;
+    if (roleByClub[activeId] === "moderator") return;
+
     setLoadingChannelsFollow(true);
-    const isF = followingByClub[activeId];
+    const isF = !!followingByClubRef.current[activeId];
     setFollowingByClub(prev => ({ ...prev, [activeId]: !isF }));
     
     try {
       if (isF) { 
         const { error } = await supabase.from("club_members").delete().match({ club_id: activeId, user_id: userId });
         if (error) throw error;
-        
-        const club = clubs.find(c => c.id === activeId); 
-        if (club) {
-           const { error: updErr } = await supabase.from("clubs").update({ follower_count: Math.max(0, (club.follower_count || 0) - 1) }).eq("id", activeId);
-           if (updErr) console.error("[Supabase Error] clubs follower_count update:", updErr.message);
-        }
-        
-        setClubs(prev => prev.filter(c => c.id !== activeId)); 
-        const rem = clubs.filter(c => c.id !== activeId); 
-        setActiveId(rem.length > 0 ? rem[0].id : null);
+
+        const remaining = clubsRef.current.filter(c => c.id !== activeId);
+        setClubs(remaining);
+        setActiveId(remaining.length > 0 ? remaining[0].id : null);
       } else { 
         const { error } = await supabase.from("club_members").insert({ club_id: activeId, user_id: userId, role: "follower" });
         if (error) throw error;
-        
-        const club = clubs.find(c => c.id === activeId); 
-        if (club) {
-           const { error: updErr } = await supabase.from("clubs").update({ follower_count: (club.follower_count || 0) + 1 }).eq("id", activeId);
-           if (updErr) console.error("[Supabase Error] clubs follower_count update:", updErr.message);
-        }
+
+        setClubs(prev => prev.map(c => c.id === activeId ? { ...c, follower_count: (c.follower_count || 0) + 1, role: "follower" } : c));
+        setRoleByClub(prev => ({ ...prev, [activeId]: "follower" }));
       }
       
     } catch (err: any) {
@@ -337,7 +360,7 @@ export default function ChannelsPageClient({ userId, initialData }: { userId: st
     } finally {
       setLoadingChannelsFollow(false);
     }
-  }, [userId, activeId, followingByClub, clubs, loadingChannelsFollow]);
+  }, [userId, activeId, roleByClub]);
 
   const handleCompose = useCallback(async () => {
     const isEventValid = composeType === "event" && eventMeta.event_title.trim() && eventMeta.event_date && eventMeta.event_time && eventMeta.event_location.trim() && eventMeta.event_desc.trim() && eventMeta.event_tags.length > 0;
@@ -453,7 +476,7 @@ export default function ChannelsPageClient({ userId, initialData }: { userId: st
   // === EVENTS TAB — fetch event posts ===
   useEffect(() => { if (activeTab !== "Events" || !activeId) return; let m = true;
     async function f() {
-      const { data: ep } = await supabase.from("channel_posts").select("id, title, metadata, created_at").eq("club_id", activeId).eq("post_type", "event").order("created_at", { ascending: false });
+      const { data: ep } = await supabase.from("channel_posts").select("id, club_id, author_id, post_type, title, body, image_url, edited, metadata, created_at").eq("club_id", activeId).eq("post_type", "event").order("created_at", { ascending: false });
       if (!m || !ep) return;
       const aids = [...new Set(ep.map((p: any) => p.author_id).filter(Boolean))];
       let am: Record<string, any> = {};
@@ -544,7 +567,13 @@ export default function ChannelsPageClient({ userId, initialData }: { userId: st
               <p className="ch-hero-desc">{editHeroDesc ? <><textarea value={editHeroDescText} onChange={e => setEditHeroDescText(e.target.value)} style={{ width: "100%", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 6, padding: 8, color: "#fff", fontSize: 13, resize: "vertical", minHeight: 50 }} /><div style={{ display: "flex", gap: 6, marginTop: 6 }}><button type="button" onClick={saveHeroDesc} style={{ padding: "4px 12px", borderRadius: 6, background: "#9EF01A", color: "#1C1C28", border: "none", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>Save</button><button type="button" onClick={() => setEditHeroDesc(false)} style={{ padding: "4px 12px", borderRadius: 6, background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.5)", border: "1px solid rgba(255,255,255,0.1)", fontSize: 11, cursor: "pointer" }}>Cancel</button></div></> : <>{activeClub.description} {isModerator && <button type="button" onClick={() => { setEditHeroDesc(true); setEditHeroDescText(activeClub.description); }} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.3)", cursor: "pointer", marginLeft: 4, verticalAlign: "middle" }}><PencilIcon size={12} /></button>}</>}</p>
               <div className="ch-hero-stats">{activeClub.follower_count.toLocaleString()} followers {recentlyActive && <span style={{ color: "#9EF01A", marginLeft: 8 }}>● Active</span>}</div>
               <div className="ch-hero-actions">
-                <button type="button" className={`ch-btn-follow${followingByClub[activeId!] ? " following" : ""}`} onClick={toggleFollow}>{followingByClub[activeId!] ? "✓ Following" : "+ Follow"}</button>
+                {isModerator ? (
+                  <button type="button" className="ch-btn-follow following" disabled>Moderator</button>
+                ) : (
+                  <button type="button" className={`ch-btn-follow${followingByClub[activeId!] ? " following" : ""}`} onClick={toggleFollow} disabled={loadingChannelsFollow}>
+                    {followingByClub[activeId!] ? "✓ Following" : "+ Follow"}
+                  </button>
+                )}
               </div>
             </div>
           </div></header>

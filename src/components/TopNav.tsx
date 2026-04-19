@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useRouter, usePathname } from "next/navigation";
 import { MessageSquare } from "lucide-react";
+import type { User } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import NetworkPanel from "./profile/NetworkPanel";
@@ -38,29 +39,92 @@ function getInitials(name: string | null): string {
 export default function TopNav() {
   const router = useRouter();
   const pathname = usePathname();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
+  const [resolvedUser, setResolvedUser] = useState<User | null>(user ?? null);
   const [profile, setProfile] = useState<any>(null);
   const [ddOpen, setDdOpen] = useState(false);
   const [networkOpen, setNetworkOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const effectiveUser = user ?? resolvedUser;
 
   useEffect(() => {
-    if (!user) { setProfile(null); return; }
+    if (user) {
+      setResolvedUser(user);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setResolvedUser(session?.user ?? null);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    if (user || authLoading) return;
+
     let cancelled = false;
+
+    supabase.auth.getUser().then(({ data: { user: authUser } }) => {
+      if (!cancelled) {
+        setResolvedUser(authUser ?? null);
+      }
+    }).catch((err) => {
+      console.warn("TopNav auth fallback error:", err);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user, authLoading]);
+
+  useEffect(() => {
+    if (!effectiveUser) {
+      if (!authLoading) setProfile(null);
+      return;
+    }
+
+    let cancelled = false;
+    const fallbackProfile = {
+      id: effectiveUser.id,
+      full_name:
+        effectiveUser.user_metadata?.full_name ||
+        effectiveUser.user_metadata?.name ||
+        effectiveUser.email?.split("@")[0] ||
+        "User",
+      stream: effectiveUser.user_metadata?.stream || "",
+      year: effectiveUser.user_metadata?.year || "",
+      avatar_url:
+        effectiveUser.user_metadata?.avatar_url ||
+        effectiveUser.user_metadata?.picture ||
+        null,
+    };
+
+    setProfile((prev: any) => prev?.id === effectiveUser.id ? { ...fallbackProfile, ...prev } : fallbackProfile);
+
     (async () => {
       try {
-        const { data: prof } = await supabase.from("users").select("id, full_name, stream, year, avatar_url").eq("id", user.id).single();
+        const { data: prof } = await supabase
+          .from("users")
+          .select("id, full_name, stream, year, avatar_url")
+          .eq("id", effectiveUser.id)
+          .maybeSingle();
+
         if (!cancelled) {
-          if (prof) setProfile(prof);
-          else setProfile({ id: user.id, full_name: "User", stream: "" });
+          if (prof) setProfile({ ...fallbackProfile, ...prof });
+          else setProfile(fallbackProfile);
         }
       } catch (err) {
         console.warn("TopNav profile fetch error:", err);
-        if (!cancelled) setProfile({ id: user.id, full_name: "User", stream: "" });
+        if (!cancelled) setProfile(fallbackProfile);
       }
     })();
+
     return () => { cancelled = true; };
-  }, [user?.id]);
+  }, [effectiveUser?.id, pathname, authLoading]);
 
   /* Close dropdown */
   useEffect(() => {

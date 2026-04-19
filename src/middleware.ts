@@ -34,8 +34,8 @@ export async function middleware(request: NextRequest) {
 
   if (!user && !isAuthRoute && request.nextUrl.pathname !== "/") {
     const redirectResponse = NextResponse.redirect(new URL("/login", request.url));
-    supabaseResponse.cookies.getAll().forEach(cookie => {
-      redirectResponse.cookies.set(cookie.name, cookie.value);
+    supabaseResponse.cookies.getAll().forEach((cookie) => {
+      redirectResponse.cookies.set(cookie);
     });
     return redirectResponse;
   }
@@ -63,16 +63,16 @@ export async function middleware(request: NextRequest) {
 
     if (!profileExists && request.nextUrl.pathname !== "/onboarding" && !isAuthRoute) {
       const redirectResponse = NextResponse.redirect(new URL("/onboarding", request.url));
-      supabaseResponse.cookies.getAll().forEach(cookie => {
-        redirectResponse.cookies.set(cookie.name, cookie.value);
+      supabaseResponse.cookies.getAll().forEach((cookie) => {
+        redirectResponse.cookies.set(cookie);
       });
       return redirectResponse;
     }
 
     if (profileExists && request.nextUrl.pathname === "/onboarding") {
       const redirectResponse = NextResponse.redirect(new URL("/discover", request.url));
-      supabaseResponse.cookies.getAll().forEach(cookie => {
-        redirectResponse.cookies.set(cookie.name, cookie.value);
+      supabaseResponse.cookies.getAll().forEach((cookie) => {
+        redirectResponse.cookies.set(cookie);
       });
       return redirectResponse;
     }

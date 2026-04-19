@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 import { logActivity } from "@/lib/logActivity";
 import { useAuth } from "@/contexts/AuthContext";
@@ -15,12 +15,16 @@ interface FollowButtonProps {
 export default function FollowButton({ targetUserId, className = "", onFollowChange }: FollowButtonProps) {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
+  const currentUserId = user?.id ?? null;
   const [isFollowing, setIsFollowing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [actionInProgress, setActionInProgress] = useState(false);
   const [isHovering, setIsHovering] = useState(false);
+  const followCheckVersionRef = useRef(0);
 
   const checkFollowStatus = useCallback(async (uid: string) => {
+    const requestVersion = ++followCheckVersionRef.current;
+    setLoading(true);
     try {
       const { data, error } = await supabase
         .from("follows")
@@ -31,42 +35,49 @@ export default function FollowButton({ targetUserId, className = "", onFollowCha
 
       if (error) {
         console.error("[FollowButton] checkFollowStatus query error:", error.message);
+        if (followCheckVersionRef.current !== requestVersion) return;
         setIsFollowing(false);
       } else {
+        if (followCheckVersionRef.current !== requestVersion) return;
         setIsFollowing(!!data);
       }
     } catch (err) {
       console.error("[FollowButton] checkFollowStatus error:", err);
     } finally {
+      if (followCheckVersionRef.current !== requestVersion) return;
       setLoading(false);
     }
   }, [targetUserId]);
 
   useEffect(() => {
-    // Safety timeout — never stay disabled forever
-    const t = setTimeout(() => setLoading(false), 4000);
-    if (!authLoading) {
-      clearTimeout(t);
-      if (user && user.id !== targetUserId) {
-        checkFollowStatus(user.id);
-      } else {
-        setLoading(false);
-      }
+    if (authLoading) {
+      followCheckVersionRef.current += 1;
+      setLoading(true);
+      return;
     }
-    return () => clearTimeout(t);
-  }, [user?.id, authLoading, targetUserId, checkFollowStatus]);
+
+    if (currentUserId && currentUserId !== targetUserId) {
+      checkFollowStatus(currentUserId);
+      return;
+    }
+
+    followCheckVersionRef.current += 1;
+    setIsFollowing(false);
+    setLoading(false);
+  }, [currentUserId, authLoading, targetUserId, checkFollowStatus]);
 
   const handleFollow = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
 
+    if (authLoading || loading || actionInProgress) return;
+
     if (!user) {
-      if (authLoading) return; // Wait for AuthContext to resolve
       window.location.href = "/login";
       return;
     }
 
-    if (user.id === targetUserId || actionInProgress) return;
+    if (user.id === targetUserId) return;
 
     setActionInProgress(true);
 
@@ -123,12 +134,13 @@ export default function FollowButton({ targetUserId, className = "", onFollowCha
 
   return (
     <button 
+      type="button"
       className={`pf-btn-net-follow ${isFollowing ? "following" : ""} ${className}`}
       onClick={handleFollow}
       onMouseEnter={() => setIsHovering(true)}
       onMouseLeave={() => setIsHovering(false)}
-      disabled={loading || actionInProgress}
-      style={loading ? { opacity: 0.6 } : undefined}
+      disabled={authLoading || loading || actionInProgress}
+      style={authLoading || loading ? { opacity: 0.6 } : undefined}
     >
       {buttonText}
     </button>

@@ -37,6 +37,8 @@ export default function ClubsPageClient({ initialClubs, initialFollowedIds, user
   // Data State
   const [clubs, setClubs] = useState<Club[]>(() => initialClubs);
   const [followedIds, setFollowedIds] = useState<Set<string>>(() => new Set(initialFollowedIds));
+  const followedIdsRef = useRef(followedIds);
+  const loadingClubsRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     setClubs(initialClubs);
@@ -45,6 +47,10 @@ export default function ClubsPageClient({ initialClubs, initialFollowedIds, user
   useEffect(() => {
     setFollowedIds(new Set(initialFollowedIds));
   }, [initialFollowedIds]);
+
+  useEffect(() => {
+    followedIdsRef.current = followedIds;
+  }, [followedIds]);
 
   // Filter State
   const [searchQuery, setSearchQuery] = useState("");
@@ -115,16 +121,20 @@ export default function ClubsPageClient({ initialClubs, initialFollowedIds, user
 
   const [loadingClubs, setLoadingClubs] = useState<Set<string>>(new Set());
 
+  useEffect(() => {
+    loadingClubsRef.current = loadingClubs;
+  }, [loadingClubs]);
+
   // Follow Action
   const toggleFollow = useCallback(async (club: Club) => {
     if (!userId) {
       router.push("/login?redirect=/clubs");
       return;
     }
-    
-    if (loadingClubs.has(club.id)) return;
 
-    const isFollowing = followedIds.has(club.id);
+    if (loadingClubsRef.current.has(club.id)) return;
+
+    const isFollowing = followedIdsRef.current.has(club.id);
     
     // Optimistic Update
     setFollowedIds(prev => {
@@ -195,7 +205,7 @@ export default function ClubsPageClient({ initialClubs, initialFollowedIds, user
         return next;
       });
     }
-  }, [userId, followedIds, loadingClubs, router]);
+  }, [userId, router]);
 
   // Generators for styling
   const getInitials = (name: string) => {
@@ -322,6 +332,7 @@ export default function ClubsPageClient({ initialClubs, initialFollowedIds, user
                       <div className="clubcard-bot">
                         <div className="clubcard-mem">{club.follower_count || 0} followers</div>
                         <button 
+                          type="button"
                           className={`clubcard-btn ${isFollowing ? 'following' : ''}`}
                           style={
                             !isFollowing ? { 

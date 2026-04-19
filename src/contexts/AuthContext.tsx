@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
 
@@ -23,55 +23,75 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [hasProfile, setHasProfile] = useState<boolean | null>(null);
+  const authStateVersionRef = useRef(0);
 
   useEffect(() => {
     let mounted = true;
+    let activeProfileRequest = 0;
 
-    async function getInitialSession() {
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (mounted) {
-        setUser(user);
-        setSession(null); // session comes from onAuthStateChange
-        
-        if (user) {
-          const { data: profile } = await supabase
-            .from('users')
-            .select('id, stream')
-            .eq('id', user.id)
-            .single();
-          setHasProfile(!!(profile && profile.stream));
-        } else {
+    const loadProfile = async (nextUser: User | null) => {
+      if (!mounted) return;
+      if (!nextUser) {
+        setHasProfile(false);
+        return;
+      }
+
+      const requestId = ++activeProfileRequest;
+      const { data: profile } = await supabase
+        .from("users")
+        .select("id, stream")
+        .eq("id", nextUser.id)
+        .maybeSingle();
+
+      if (!mounted || activeProfileRequest !== requestId) return;
+      setHasProfile(!!(profile && profile.stream));
+    };
+
+    const applyAuthState = async (nextSession: Session | null, nextUser: User | null) => {
+      if (!mounted) return;
+      const version = ++authStateVersionRef.current;
+
+      setSession(nextSession);
+      setUser(nextUser);
+      await loadProfile(nextUser);
+
+      if (!mounted || authStateVersionRef.current !== version) return;
+      setLoading(false);
+    };
+
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      async (event, nextSession) => {
+        if (!mounted) return;
+
+        if (event === "SIGNED_OUT") {
+          authStateVersionRef.current += 1;
+          activeProfileRequest += 1;
+          setSession(null);
+          setUser(null);
           setHasProfile(false);
+          setLoading(false);
+          return;
         }
-        
-        setLoading(false);
+
+        const nextUser = nextSession?.user ?? null;
+        await applyAuthState(nextSession, nextUser);
+      }
+    );
+
+    async function initializeAuth() {
+      try {
+        const {
+          data: { user: initialUser },
+        } = await supabase.auth.getUser();
+
+        if (!mounted) return;
+        await applyAuthState(null, initialUser ?? null);
+      } finally {
+        if (mounted) setLoading(false);
       }
     }
 
-    getInitialSession();
-
-    const { data: authListener } = supabase.auth.onAuthStateChange(
-      async (event, newSession) => {
-        if (mounted) {
-          setSession(newSession);
-          setUser(newSession?.user ?? null);
-          
-          if (newSession?.user) {
-            const { data: profile } = await supabase
-              .from('users')
-              .select('id, stream')
-              .eq('id', newSession.user.id)
-              .single();
-            setHasProfile(!!(profile && profile.stream));
-          } else {
-            setHasProfile(false);
-          }
-          
-          setLoading(false);
-        }
-      }
-    );
+    initializeAuth();
 
     return () => {
       mounted = false;

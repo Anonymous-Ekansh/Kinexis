@@ -32,7 +32,10 @@ export default function RequestPanel({ userId, request, draftUser, onResolved, o
     try {
       await acceptRequest(request.id);
       const conv = await getOrCreateConversation(userId, targetUser.id);
-      onResolved(conv);
+      onResolved({
+        ...conv,
+        otherUser: targetUser,
+      });
     } catch { setLoading(false); }
   };
 
