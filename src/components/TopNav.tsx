@@ -90,17 +90,10 @@ export default function TopNav() {
     let cancelled = false;
     const fallbackProfile = {
       id: effectiveUser.id,
-      full_name:
-        effectiveUser.user_metadata?.full_name ||
-        effectiveUser.user_metadata?.name ||
-        effectiveUser.email?.split("@")[0] ||
-        "User",
-      stream: effectiveUser.user_metadata?.stream || "",
-      year: effectiveUser.user_metadata?.year || "",
-      avatar_url:
-        effectiveUser.user_metadata?.avatar_url ||
-        effectiveUser.user_metadata?.picture ||
-        null,
+      full_name: "User",
+      stream: "",
+      year: "",
+      avatar_url: null,
     };
 
     setProfile((prev: any) => prev?.id === effectiveUser.id ? { ...fallbackProfile, ...prev } : fallbackProfile);

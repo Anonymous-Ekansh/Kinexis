@@ -3,10 +3,10 @@
    ══════════════════════════════════ */
 
 /* ── Layout ── */
-.msg-page{height:100%;display:grid;grid-template-columns:340px 1fr;background:var(--bg);overflow:hidden;}
+.msg-page{height:100%;min-height:0;min-width:0;display:grid;grid-template-columns:340px 1fr;background:var(--bg);overflow:hidden;}
 
 /* ── Sidebar ── */
-.msg-sidebar{display:flex;flex-direction:column;border-right:1px solid var(--border);background:var(--surface);overflow:hidden;}
+.msg-sidebar{display:flex;flex-direction:column;min-width:0;min-height:0;border-right:1px solid var(--border);background:var(--surface);overflow:hidden;}
 .msg-sidebar-header{display:flex;align-items:center;justify-content:space-between;padding:24px 20px 16px;}
 .msg-sidebar-title{font-family:'Syne',sans-serif;font-size:24px;font-weight:800;color:#fff;letter-spacing:-0.03em;}
 .msg-sidebar-new{width:36px;height:36px;border-radius:10px;background:rgba(158,240,26,0.15);border:1px solid rgba(158,240,26,.3);color:var(--lime);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .15s;}
@@ -45,7 +45,7 @@
 .msg-request-decline:hover{border-color:var(--coral);color:var(--coral);}
 
 /* Conversation Row */
-.msg-conv-list{flex:1;overflow-y:auto;padding:16px 14px;}
+.msg-conv-list{flex:1;min-height:0;overflow-y:auto;padding:16px 14px;}
 .msg-conv-list::-webkit-scrollbar{width:4px;}
 .msg-conv-list::-webkit-scrollbar-track{background:transparent;}
 .msg-conv-list::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.08);border-radius:2px;}
@@ -67,7 +67,7 @@
 .msg-conv-badge{background:var(--lime);color:#111;font-size:10px;font-weight:800;width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
 
 /* ── Chat Panel ── */
-.msg-chat-panel{display:flex;flex-direction:column;height:100%;background:#181922;position:relative;}
+.msg-chat-panel{display:flex;flex-direction:column;min-width:0;min-height:0;height:100%;background:#181922;position:relative;}
 .msg-chat-empty{align-items:center;justify-content:center;background:var(--bg);}
 .msg-empty-icon{margin-bottom:12px;}
 .msg-empty-title{font-family:'Syne',sans-serif;font-size:18px;font-weight:800;color:#fff;margin-bottom:4px;}
@@ -98,7 +98,7 @@
 .msg-blocked-banner{display:flex;align-items:center;justify-content:center;padding:12px;background:rgba(251,113,133,0.1);border-bottom:1px solid rgba(251,113,133,0.15);color:var(--coral);font-size:13px;font-weight:700;flex-shrink:0;}
 
 /* Messages Area */
-.msg-messages-area{flex:1;overflow-y:auto;padding:24px;display:flex;flex-direction:column;gap:6px;}
+.msg-messages-area{flex:1;min-width:0;min-height:0;overflow-y:auto;padding:24px;display:flex;flex-direction:column;gap:6px;}
 .msg-messages-area::-webkit-scrollbar{width:6px;}
 .msg-messages-area::-webkit-scrollbar-track{background:transparent;}
 .msg-messages-area::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.08);border-radius:3px;}
@@ -136,7 +136,7 @@
 .msg-input-send:disabled{opacity:.4;cursor:not-allowed;transform:none;box-shadow:none;}
 
 /* ── Request Dashboard Panel ── */
-.msg-req-panel{flex:1;display:flex;align-items:center;justify-content:center;background:#181922;position:relative;padding:24px;overflow-y:auto;}
+.msg-req-panel{flex:1;min-width:0;min-height:0;display:flex;align-items:center;justify-content:center;background:#181922;position:relative;padding:24px;overflow-y:auto;}
 .msg-req-panel.sent-state{background:#181922;}
 .msg-req-back{position:absolute;top:24px;left:24px;background:none;border:none;color:var(--sub);cursor:pointer;padding:8px;transition:color .15s;}
 .msg-req-back:hover{color:#fff;}
@@ -227,7 +227,7 @@
 @media(max-width:767px){
   .msg-page{grid-template-columns:1fr;}
   .msg-page.chat-open .msg-sidebar{display:none;}
-  .msg-page:not(.chat-open) .msg-chat-panel{display:none;}
+  .msg-page:not(.chat-open) .msg-chat-panel:not(.msg-chat-empty){display:none;}
   .msg-chat-back{display:flex !important; min-height: 44px; min-width: 44px; align-items: center; justify-content: center;}
   .msg-sidebar{border-right:none;}
   .msg-chat-panel{height:100%; flex: 1;}

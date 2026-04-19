@@ -7,6 +7,7 @@ import { fetchMessages, sendMessage, markMessagesRead, checkBlocked, blockUser, 
 import { encryptMessage, decryptMessage } from "@/lib/messages/crypto";
 import { subscribeToMessages, subscribeToPresence, unsubscribe } from "@/lib/messages/realtime";
 import { getPresence } from "@/lib/messages/queries";
+import { supabase } from "@/lib/supabase";
 import ChatHeader from "./ChatHeader";
 import MessageBubble from "./MessageBubble";
 import MessageInput from "./MessageInput";
@@ -26,6 +27,7 @@ export default function ChatPanel({ userId, conversation, onConversationDeleted,
   const [decrypted, setDecrypted] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const [presence, setPresence] = useState<any>(null);
+  const [resolvedOtherUser, setResolvedOtherUser] = useState<any>(conversation?.otherUser ?? null);
   const [blockState, setBlockState] = useState({ iBlockedThem: false, theyBlockedMe: false });
   const [showBlockConfirm, setShowBlockConfirm] = useState(false);
   const [showUnblockConfirm, setShowUnblockConfirm] = useState(false);
@@ -33,8 +35,8 @@ export default function ChatPanel({ userId, conversation, onConversationDeleted,
   const [showProfile, setShowProfile] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const otherUser = conversation?.otherUser;
   const otherId = conversation ? (conversation.user1_id === userId ? conversation.user2_id : conversation.user1_id) : null;
+  const otherUser = conversation?.otherUser ?? resolvedOtherUser;
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -78,6 +80,33 @@ export default function ChatPanel({ userId, conversation, onConversationDeleted,
     loadBlockState();
     loadPresence();
   }, [loadMessages, loadBlockState, loadPresence]);
+
+  useEffect(() => {
+    setResolvedOtherUser(conversation?.otherUser ?? null);
+
+    if (!conversation || conversation.otherUser || !otherId) return;
+
+    let cancelled = false;
+
+    void (async () => {
+      try {
+        const { data, error } = await supabase
+          .from("users")
+          .select("id, full_name, avatar_url, stream, year")
+          .eq("id", otherId)
+          .maybeSingle();
+
+        if (cancelled || error || !data) return;
+        setResolvedOtherUser(data);
+      } catch (err) {
+        console.warn("ChatPanel otherUser fallback failed:", err);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [conversation?.id, otherId]);
 
   useEffect(() => { scrollToBottom(); }, [messages]);
 

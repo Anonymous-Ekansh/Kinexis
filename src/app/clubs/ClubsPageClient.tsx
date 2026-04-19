@@ -163,18 +163,39 @@ export default function ClubsPageClient({ initialClubs, initialFollowedIds, user
           .eq("user_id", userId);
           
         if (err1) throw err1;
+
+        const { error: clubUpdateError } = await supabase
+          .from("clubs")
+          .update({ follower_count: Math.max(0, club.follower_count - 1) })
+          .eq("id", club.id);
+
+        if (clubUpdateError) throw clubUpdateError;
         
         logActivity({ userId, activityType: "unfollow_club", targetTitle: club.name, targetId: club.id, targetType: "club" });
       } else {
-        // Follow
-        const insertRes = await supabase
+        const { data: existingMembership, error: existingMembershipError } = await supabase
           .from("club_members")
-          .insert({ club_id: club.id, user_id: userId, role: "follower" });
-        
-        console.log("Supabase Insert Response:", insertRes);
-        const { error: err1 } = insertRes;
-          
-        if (err1) throw err1;
+          .select("club_id, role")
+          .eq("club_id", club.id)
+          .eq("user_id", userId)
+          .maybeSingle();
+
+        if (existingMembershipError) throw existingMembershipError;
+
+        if (!existingMembership) {
+          const { error: insertError } = await supabase
+            .from("club_members")
+            .insert({ club_id: club.id, user_id: userId, role: "follower" });
+
+          if (insertError) throw insertError;
+
+          const { error: clubUpdateError } = await supabase
+            .from("clubs")
+            .update({ follower_count: club.follower_count + 1 })
+            .eq("id", club.id);
+
+          if (clubUpdateError) throw clubUpdateError;
+        }
         
         logActivity({ userId, activityType: "follow_club", targetTitle: club.name, targetId: club.id, targetType: "club" });
       }

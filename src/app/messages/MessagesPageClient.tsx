@@ -85,6 +85,7 @@ export default function MessagesPageClient({ userId, initialData }: { userId: st
     setDraftUser(null);
     if (conv) {
       setActiveConv(conv);
+      setChatOpen(true);
     } else {
       setChatOpen(false);
     }
@@ -104,6 +105,7 @@ export default function MessagesPageClient({ userId, initialData }: { userId: st
       />
       {activeConv ? (
         <ChatPanel
+          key={activeConv.id}
           userId={userId}
           conversation={activeConv}
           onConversationDeleted={handleConversationDeleted}
@@ -111,6 +113,7 @@ export default function MessagesPageClient({ userId, initialData }: { userId: st
         />
       ) : (activeRequest || draftUser) ? (
         <RequestPanel 
+          key={activeRequest?.id ?? draftUser?.id ?? "request-panel"}
           userId={userId}
           request={activeRequest}
           draftUser={draftUser}

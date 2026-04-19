@@ -21,7 +21,7 @@ export default async function MessagesPage() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
       <TopNav />
-      <div style={{ flex: 1, overflow: 'hidden' }}>
+      <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
         <MessagesPageClient userId={user.id} initialData={messagesData} />
       </div>
     </div>

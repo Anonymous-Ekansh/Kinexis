@@ -342,14 +342,49 @@ export default function ChannelsPageClient({ userId, initialData }: { userId: st
         const { error } = await supabase.from("club_members").delete().match({ club_id: activeId, user_id: userId });
         if (error) throw error;
 
+        const activeClub = clubsRef.current.find(c => c.id === activeId);
+        if (activeClub) {
+          const { error: clubUpdateError } = await supabase
+            .from("clubs")
+            .update({ follower_count: Math.max(0, (activeClub.follower_count || 0) - 1) })
+            .eq("id", activeId);
+
+          if (clubUpdateError) throw clubUpdateError;
+        }
+
         const remaining = clubsRef.current.filter(c => c.id !== activeId);
         setClubs(remaining);
         setActiveId(remaining.length > 0 ? remaining[0].id : null);
       } else { 
-        const { error } = await supabase.from("club_members").insert({ club_id: activeId, user_id: userId, role: "follower" });
-        if (error) throw error;
+        let didInsertMembership = false;
+        const { data: existingMembership, error: existingMembershipError } = await supabase
+          .from("club_members")
+          .select("club_id, role")
+          .eq("club_id", activeId)
+          .eq("user_id", userId)
+          .maybeSingle();
 
-        setClubs(prev => prev.map(c => c.id === activeId ? { ...c, follower_count: (c.follower_count || 0) + 1, role: "follower" } : c));
+        if (existingMembershipError) throw existingMembershipError;
+
+        if (!existingMembership) {
+          const { error } = await supabase
+            .from("club_members")
+            .insert({ club_id: activeId, user_id: userId, role: "follower" });
+          if (error) throw error;
+          didInsertMembership = true;
+
+          const activeClub = clubsRef.current.find(c => c.id === activeId);
+          if (activeClub) {
+            const { error: clubUpdateError } = await supabase
+              .from("clubs")
+              .update({ follower_count: (activeClub.follower_count || 0) + 1 })
+              .eq("id", activeId);
+
+            if (clubUpdateError) throw clubUpdateError;
+          }
+        }
+
+        setClubs(prev => prev.map(c => c.id === activeId ? { ...c, follower_count: didInsertMembership ? (c.follower_count || 0) + 1 : c.follower_count, role: "follower" } : c));
         setRoleByClub(prev => ({ ...prev, [activeId]: "follower" }));
       }
       

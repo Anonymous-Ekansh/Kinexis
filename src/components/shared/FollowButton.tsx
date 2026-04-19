@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback, useRef } from "react";
+import type { User } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
 import { logActivity } from "@/lib/logActivity";
 import { useAuth } from "@/contexts/AuthContext";
@@ -15,12 +16,39 @@ interface FollowButtonProps {
 export default function FollowButton({ targetUserId, className = "", onFollowChange }: FollowButtonProps) {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
-  const currentUserId = user?.id ?? null;
+  const [resolvedUser, setResolvedUser] = useState<User | null>(user ?? null);
+  const effectiveUser = user ?? resolvedUser;
+  const currentUserId = effectiveUser?.id ?? null;
+  const authPending = authLoading && !currentUserId;
   const [isFollowing, setIsFollowing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [actionInProgress, setActionInProgress] = useState(false);
   const [isHovering, setIsHovering] = useState(false);
   const followCheckVersionRef = useRef(0);
+
+  useEffect(() => {
+    if (user) {
+      setResolvedUser(user);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (user || authLoading) return;
+
+    let cancelled = false;
+
+    supabase.auth.getUser().then(({ data: { user: authUser } }) => {
+      if (!cancelled) {
+        setResolvedUser(authUser ?? null);
+      }
+    }).catch((err) => {
+      console.warn("[FollowButton] auth fallback error:", err);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user, authLoading]);
 
   const checkFollowStatus = useCallback(async (uid: string) => {
     const requestVersion = ++followCheckVersionRef.current;
@@ -31,7 +59,7 @@ export default function FollowButton({ targetUserId, className = "", onFollowCha
         .select("follower_id")
         .eq("follower_id", uid)
         .eq("following_id", targetUserId)
-        .maybeSingle();
+        .limit(1);
 
       if (error) {
         console.error("[FollowButton] checkFollowStatus query error:", error.message);
@@ -39,7 +67,7 @@ export default function FollowButton({ targetUserId, className = "", onFollowCha
         setIsFollowing(false);
       } else {
         if (followCheckVersionRef.current !== requestVersion) return;
-        setIsFollowing(!!data);
+        setIsFollowing((data?.length || 0) > 0);
       }
     } catch (err) {
       console.error("[FollowButton] checkFollowStatus error:", err);
@@ -50,7 +78,7 @@ export default function FollowButton({ targetUserId, className = "", onFollowCha
   }, [targetUserId]);
 
   useEffect(() => {
-    if (authLoading) {
+    if (authPending) {
       followCheckVersionRef.current += 1;
       setLoading(true);
       return;
@@ -64,20 +92,30 @@ export default function FollowButton({ targetUserId, className = "", onFollowCha
     followCheckVersionRef.current += 1;
     setIsFollowing(false);
     setLoading(false);
-  }, [currentUserId, authLoading, targetUserId, checkFollowStatus]);
+  }, [currentUserId, authPending, targetUserId, checkFollowStatus]);
 
   const handleFollow = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
 
-    if (authLoading || loading || actionInProgress) return;
+    if (authPending || loading || actionInProgress) return;
 
-    if (!user) {
+    let actingUser = effectiveUser;
+
+    if (!actingUser) {
+      const { data: { user: fallbackUser } } = await supabase.auth.getUser();
+      if (fallbackUser) {
+        setResolvedUser(fallbackUser);
+        actingUser = fallbackUser;
+      }
+    }
+
+    if (!actingUser) {
       window.location.href = "/login";
       return;
     }
 
-    if (user.id === targetUserId) return;
+    if (actingUser.id === targetUserId) return;
 
     setActionInProgress(true);
 
@@ -91,16 +129,28 @@ export default function FollowButton({ targetUserId, className = "", onFollowCha
         const { error } = await supabase
           .from("follows")
           .delete()
-          .eq("follower_id", user.id)
+          .eq("follower_id", actingUser.id)
           .eq("following_id", targetUserId);
         if (error) throw error;
-        logActivity({ userId: user.id, activityType: "unfollow_user", targetId: targetUserId, targetType: "user" });
+        logActivity({ userId: actingUser.id, activityType: "unfollow_user", targetId: targetUserId, targetType: "user" });
       } else {
-        const { error } = await supabase
+        const { data: existingFollow, error: existingError } = await supabase
           .from("follows")
-          .insert({ follower_id: user.id, following_id: targetUserId });
-        if (error) throw error;
-        logActivity({ userId: user.id, activityType: "follow_user", targetId: targetUserId, targetType: "user" });
+          .select("follower_id")
+          .eq("follower_id", actingUser.id)
+          .eq("following_id", targetUserId)
+          .limit(1);
+
+        if (existingError) throw existingError;
+
+        if (!existingFollow || existingFollow.length === 0) {
+          const { error } = await supabase
+            .from("follows")
+            .insert({ follower_id: actingUser.id, following_id: targetUserId });
+          if (error) throw error;
+        }
+
+        logActivity({ userId: actingUser.id, activityType: "follow_user", targetId: targetUserId, targetType: "user" });
       }
 
       if (typeof window !== "undefined") {
@@ -120,7 +170,7 @@ export default function FollowButton({ targetUserId, className = "", onFollowCha
   };
 
   // Hide only for own profile (and only after we know who the user is)
-  if (user && user.id === targetUserId) return null;
+  if (effectiveUser && effectiveUser.id === targetUserId) return null;
 
   // Determine button text
   let buttonText = "Follow";
@@ -139,8 +189,8 @@ export default function FollowButton({ targetUserId, className = "", onFollowCha
       onClick={handleFollow}
       onMouseEnter={() => setIsHovering(true)}
       onMouseLeave={() => setIsHovering(false)}
-      disabled={authLoading || loading || actionInProgress}
-      style={authLoading || loading ? { opacity: 0.6 } : undefined}
+      disabled={authPending || loading || actionInProgress}
+      style={authPending || loading ? { opacity: 0.6 } : undefined}
     >
       {buttonText}
     </button>

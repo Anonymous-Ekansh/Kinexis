@@ -29,7 +29,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     let mounted = true;
     let activeProfileRequest = 0;
 
-    const loadProfile = async (nextUser: User | null) => {
+    const loadProfile = async (nextUser: User | null, version: number) => {
       if (!mounted) return;
       if (!nextUser) {
         setHasProfile(false);
@@ -43,20 +43,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .eq("id", nextUser.id)
         .maybeSingle();
 
-      if (!mounted || activeProfileRequest !== requestId) return;
+      if (!mounted || activeProfileRequest !== requestId || authStateVersionRef.current !== version) return;
       setHasProfile(!!(profile && profile.stream));
     };
 
-    const applyAuthState = async (nextSession: Session | null, nextUser: User | null) => {
+    const applyAuthState = (nextSession: Session | null, nextUser: User | null) => {
       if (!mounted) return;
       const version = ++authStateVersionRef.current;
 
       setSession(nextSession);
       setUser(nextUser);
-      await loadProfile(nextUser);
-
-      if (!mounted || authStateVersionRef.current !== version) return;
       setLoading(false);
+      void loadProfile(nextUser, version);
     };
 
     const { data: authListener } = supabase.auth.onAuthStateChange(
@@ -74,18 +72,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
 
         const nextUser = nextSession?.user ?? null;
-        await applyAuthState(nextSession, nextUser);
+        applyAuthState(nextSession, nextUser);
       }
     );
 
     async function initializeAuth() {
       try {
-        const {
-          data: { user: initialUser },
-        } = await supabase.auth.getUser();
+        const [
+          { data: { session: initialSession } },
+          { data: { user: initialUser } },
+        ] = await Promise.all([
+          supabase.auth.getSession(),
+          supabase.auth.getUser(),
+        ]);
 
         if (!mounted) return;
-        await applyAuthState(null, initialUser ?? null);
+        applyAuthState(initialSession ?? null, initialUser ?? initialSession?.user ?? null);
       } finally {
         if (mounted) setLoading(false);
       }
