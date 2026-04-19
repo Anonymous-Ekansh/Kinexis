@@ -1,136 +1,78 @@
 "use client";
-
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
-import { logActivity } from "@/lib/logActivity";
-import { useAuth } from "@/contexts/AuthContext";
-import { useRouter } from "next/navigation";
 
-interface FollowButtonProps {
+export default function FollowButton({ targetUserId, className = "", onFollowChange }: {
   targetUserId: string;
   className?: string;
   onFollowChange?: (isFollowing: boolean) => void;
-}
-
-export default function FollowButton({ targetUserId, className = "", onFollowChange }: FollowButtonProps) {
-  const router = useRouter();
-  const { user, loading: authLoading } = useAuth();
+}) {
+  const [userId, setUserId] = useState<string | null>(null);
   const [isFollowing, setIsFollowing] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [actionInProgress, setActionInProgress] = useState(false);
-  const [isHovering, setIsHovering] = useState(false);
-
-  const checkFollowStatus = useCallback(async (uid: string) => {
-    try {
-      const { data, error } = await supabase
-        .from("follows")
-        .select("follower_id")
-        .eq("follower_id", uid)
-        .eq("following_id", targetUserId)
-        .maybeSingle();
-
-      if (error) {
-        console.error("[FollowButton] checkFollowStatus query error:", error.message);
-        setIsFollowing(false);
-      } else {
-        setIsFollowing(!!data);
-      }
-    } catch (err) {
-      console.error("[FollowButton] checkFollowStatus error:", err);
-    } finally {
-      setLoading(false);
-    }
-  }, [targetUserId]);
+  const [busy, setBusy] = useState(false);
+  const [hover, setHover] = useState(false);
 
   useEffect(() => {
-    // Safety timeout — never stay disabled forever
-    const t = setTimeout(() => setLoading(false), 4000);
-    if (!authLoading) {
-      clearTimeout(t);
-      if (user && user.id !== targetUserId) {
-        checkFollowStatus(user.id);
-      } else {
+    let cancelled = false;
+    async function init() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (cancelled || !user || user.id === targetUserId) {
+        setLoading(false);
+        return;
+      }
+      setUserId(user.id);
+      const { data } = await supabase
+        .from("follows")
+        .select("follower_id")
+        .eq("follower_id", user.id)
+        .eq("following_id", targetUserId)
+        .maybeSingle();
+      if (!cancelled) {
+        setIsFollowing(!!data);
         setLoading(false);
       }
     }
-    return () => clearTimeout(t);
-  }, [user?.id, authLoading, targetUserId, checkFollowStatus]);
+    init();
+    return () => { cancelled = true; };
+  }, [targetUserId]);
 
-  const handleFollow = async (e: React.MouseEvent) => {
+  if (!loading && (!userId || userId === targetUserId)) return null;
+
+  const handleClick = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-
-    if (!user) {
-      if (authLoading) return; // Wait for AuthContext to resolve
-      window.location.href = "/login";
-      return;
-    }
-
-    if (user.id === targetUserId || actionInProgress) return;
-
-    setActionInProgress(true);
-
-    // Optimistic Update
-    const wasFollowing = isFollowing;
-    const nextState = !isFollowing;
-    setIsFollowing(nextState);
-
+    if (!userId || busy) return;
+    setBusy(true);
+    const next = !isFollowing;
+    setIsFollowing(next);
     try {
-      if (wasFollowing) {
-        const { error } = await supabase
-          .from("follows")
-          .delete()
-          .eq("follower_id", user.id)
-          .eq("following_id", targetUserId);
-        if (error) throw error;
-        logActivity({ userId: user.id, activityType: "unfollow_user", targetId: targetUserId, targetType: "user" });
+      if (isFollowing) {
+        await supabase.from("follows").delete()
+          .eq("follower_id", userId).eq("following_id", targetUserId);
       } else {
-        const { error } = await supabase
-          .from("follows")
-          .insert({ follower_id: user.id, following_id: targetUserId });
-        if (error) throw error;
-        logActivity({ userId: user.id, activityType: "follow_user", targetId: targetUserId, targetType: "user" });
+        await supabase.from("follows").insert(
+          { follower_id: userId, following_id: targetUserId }
+        );
       }
-
-      if (typeof window !== "undefined") {
-        window.dispatchEvent(new CustomEvent("activityUpdated"));
-      }
-
-      onFollowChange?.(nextState);
-      
-      // Tell Next.js router to drop cached payloads for this route
-      router.refresh();
-    } catch (err: any) {
-      console.warn("Follow failed:", err.message || err);
-      setIsFollowing(wasFollowing); // Revert on error
+      onFollowChange?.(next);
+    } catch {
+      setIsFollowing(!next); // revert
     } finally {
-      setActionInProgress(false);
+      setBusy(false);
     }
   };
 
-  // Hide only for own profile (and only after we know who the user is)
-  if (user && user.id === targetUserId) return null;
-
-  // Determine button text
-  let buttonText = "Follow";
-  if (!loading) {
-    if (isFollowing) {
-      buttonText = isHovering ? "Unfollow" : "Following";
-    } else {
-      buttonText = "Follow";
-    }
-  }
-
   return (
-    <button 
+    <button
       className={`pf-btn-net-follow ${isFollowing ? "following" : ""} ${className}`}
-      onClick={handleFollow}
-      onMouseEnter={() => setIsHovering(true)}
-      onMouseLeave={() => setIsHovering(false)}
-      disabled={loading || actionInProgress}
-      style={loading ? { opacity: 0.6 } : undefined}
+      onClick={handleClick}
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      disabled={loading || busy}
+      style={loading ? { opacity: 0.5 } : undefined}
     >
-      {buttonText}
+      {loading ? "..." : isFollowing ? (hover ? "Unfollow" : "Following") : "Follow"}
     </button>
   );
 }

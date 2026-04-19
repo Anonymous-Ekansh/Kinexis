@@ -35,16 +35,24 @@ export default function ClubsPageClient({ initialClubs, initialFollowedIds, user
   const [hoveredClubId, setHoveredClubId] = useState<string | null>(null);
   
   // Data State
-  const [clubs, setClubs] = useState<Club[]>(() => initialClubs);
-  const [followedIds, setFollowedIds] = useState<Set<string>>(() => new Set(initialFollowedIds));
+  const [clubs, setClubs] = useState<Club[]>([]);
+  const [followedIds, setFollowedIds] = useState<Set<string>>(new Set());
+  const [pageLoading, setPageLoading] = useState(true);
 
   useEffect(() => {
-    setClubs(initialClubs);
-  }, [initialClubs]);
-
-  useEffect(() => {
-    setFollowedIds(new Set(initialFollowedIds));
-  }, [initialFollowedIds]);
+    async function load() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { setPageLoading(false); return; }
+      const [clubsRes, followRes] = await Promise.all([
+        supabase.from("clubs").select("id, name, initials, accent_color, description, follower_count, category, tags").order("follower_count", { ascending: false }),
+        supabase.from("club_members").select("club_id").eq("user_id", user.id)
+      ]);
+      setClubs(clubsRes.data || []);
+      setFollowedIds(new Set((followRes.data || []).map((f: any) => f.club_id)));
+      setPageLoading(false);
+    }
+    load();
+  }, []);
 
   // Filter State
   const [searchQuery, setSearchQuery] = useState("");
