@@ -202,19 +202,7 @@ export default function EventsPageClient({ userId, initialData }: { userId: stri
   const currentMonth = new Date().toLocaleString("en-US", { month: "long", year: "numeric" });
   const tzOffset = 5.5 * 60 * 60 * 1000; // +05:30
 
-  function formatTime(iso: string, eventsTime?: string) {
-    if (eventsTime) {
-      const [hours, minutes] = eventsTime.split(':');
-      if (hours && minutes) {
-        const d = new Date();
-        d.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0, 0);
-        return d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
-      }
-    }
-    if (!iso) return "";
-    const d = new Date(iso);
-    return d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: "Asia/Kolkata" });
-  }
+  // formatTime removed inline directly
 
   function formatDate(iso: string) {
     if (!iso) return { day: "", month: "", weekday: "", full: "" };
@@ -357,8 +345,7 @@ export default function EventsPageClient({ userId, initialData }: { userId: stri
                           </div>
                         )}
                         <div className="fe-detail">
-                          <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><circle cx="6.5" cy="6.5" r="4.5" stroke="currentColor" strokeWidth="1.3"/><path d="M6.5 4V6.5l1.5 1.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/></svg>
-                          Starts {formatDate(featuredEvent.event_date).day} {formatDate(featuredEvent.event_date).month}, {formatTime(featuredEvent.event_date, featuredEvent.events_time)}
+                          Starts {formatDate(featuredEvent.event_date).day} {formatDate(featuredEvent.event_date).month}, {featuredEvent.event_time ?? "Time TBA"}
                         </div>
                       </div>
                       <div className="fe-actions">
@@ -419,8 +406,7 @@ export default function EventsPageClient({ userId, initialData }: { userId: stri
                                 </div>
                               )}
                               <div className="ec-meta-item">
-                                <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><circle cx="5.5" cy="5.5" r="3.5" stroke="currentColor" strokeWidth="1.2"/><path d="M5.5 3.5v2l1 1" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/></svg>
-                                {formatTime(ev.event_date, ev.events_time)}
+                                {ev.event_time ?? "Time TBA"}
                               </div>
                               <div className="ec-meta-item">By {resolveOrganizer(ev)}</div>
                             </div>
