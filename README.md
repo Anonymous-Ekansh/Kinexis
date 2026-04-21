@@ -1,36 +1,142 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Kinexis
 
-## Getting Started
+**Your campus network — built for every stream and every batch.**
 
-First, run the development server:
+Kinexis is a student-first social platform for college communities. It connects students across departments, batches and interests — and gives clubs a real infrastructure to reach the people who follow them.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+Live at **[kinexis.in](https://kinexis.in)**
+
+---
+
+## Features
+
+| Feature | Description |
+|---|---|
+| **Discover** | Browse students by department, year and interest. Follow anyone. |
+| **Channels** | Follow clubs and get their posts, events and announcements in one feed. |
+| **Events** | Campus-wide event calendar, automatically populated from club emails. |
+| **Campus Feed** | Threads, confessions, memes, professor reviews — anonymous posting supported. |
+| **Collabs** | Post what you want to build. Find teammates, co-founders, partners. |
+| **Messaging** | Request-based DMs — send an intro, chat opens when accepted. |
+
+---
+
+## Tech stack
+
+### Frontend
+- **Next.js 16** — App Router
+- **React 19**
+- **TypeScript**
+- **Tailwind CSS v4**
+- **Framer Motion**
+- **Lucide React** — icons
+
+### Backend & Infrastructure
+- **Supabase** — Postgres, Auth (Google OAuth), Realtime, Edge Functions, Row Level Security
+- **Google Apps Script** — automated email ingestion pipeline (runs every 15 minutes)
+
+---
+
+## Project structure
+
+```
+src/
+├── app/                          # Next.js App Router
+│   ├── auth/
+│   │   ├── callback/             # OAuth callback handler
+│   │   └── signout/
+│   ├── channels/                 # Club channels and post feed
+│   ├── clubs/                    # Club directory
+│   ├── collabs/                  # Collaboration board
+│   ├── discover/                 # Student discovery
+│   ├── events/                   # Campus events calendar
+│   ├── feed/                     # Campus Feed
+│   ├── login/
+│   ├── messages/                 # Messaging
+│   ├── onboarding/
+│   ├── profile/
+│   └── signup/
+│
+├── components/
+│   ├── clubs/
+│   ├── discover/                 # ProfileCard, DiscoverFeed, FeaturedMatch, TeamCard etc.
+│   ├── messages/                 # ChatPanel, MessageBubble, ConversationRow, RequestPanel etc.
+│   ├── profile/
+│   ├── providers/
+│   └── shared/                   # TopNav, FollowButton
+│
+├── context/                      # React context providers
+├── contexts/
+├── data/                         # Mock data and constants
+├── hooks/                        # Custom React hooks
+└── lib/
+    ├── channels/                 # Channel queries and realtime
+    ├── messages/
+    │   ├── crypto.ts             # Message encryption
+    │   ├── queries.ts
+    │   └── realtime.ts
+    ├── logActivity.ts
+    ├── server-fetchers.ts        # Server-side Supabase fetchers
+    ├── supabase-server.ts        # SSR Supabase client
+    └── supabase.ts               # Client-side Supabase client
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+---
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Database schema
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Table | Purpose |
+|---|---|
+| `users` | Student profiles — name, stream, batch, interests, bio |
+| `follows` | Student follow graph |
+| `social_links` | Profile social links |
+| `user_presence` | Online/active status |
+| `activity` | User activity log |
+| `clubs` | Club directory |
+| `club_members` | Club follow relationships and roles |
+| `channel_posts` | All club posts — announcements and events |
+| `email_club_mapping` | Maps sender email → club for ingestion pipeline |
+| `events` | Structured event data — date, time, venue, type, entry |
+| `event_interest` | Students who marked interest in an event |
+| `rsvps` | Event RSVPs |
+| `collabs` | Collaboration posts |
+| `collab_requests` | Join requests for collabs |
+| `collab_members` | Accepted collab members |
+| `feed_posts` | Campus Feed posts — threads, confessions, memes |
+| `feed_comments` | Comments on feed posts |
+| `feed_votes` | Upvotes/downvotes on feed posts |
+| `post_reactions` | Emoji reactions on channel posts |
+| `conversations` | Direct message threads |
+| `messages` | Individual messages within conversations |
+| `message_requests` | Intro-based connection requests |
+| `blocked_users` | Block relationships |
 
-## Learn More
+All tables have Row Level Security enabled.
 
-To learn more about Next.js, take a look at the following resources:
+---
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Email ingestion pipeline
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Club emails → Google Apps Script (every 15 min) → parses date, time, venue, entry type, form link → Supabase Edge Function → `channel_posts` + `events` tables.
 
-## Deploy on Vercel
+The parser handles real-world email formats — emoji date markers, HTML entities, ordinal dates, IST/UTC normalisation across 7 fallback extraction patterns.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+---
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Local development
+
+```bash
+npm install
+npm run dev
+```
+
+Environment variables needed: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+
+Deploy the edge function:
+```bash
+supabase functions deploy ingest-club-email
+```
+
+---
+
+*Kinexis — Meet the people who will build your future with you.*
