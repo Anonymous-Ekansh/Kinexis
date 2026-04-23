@@ -72,6 +72,7 @@ export default function DiscoverFeed({ initialData, userId, onSearchNavigate }: 
         spotsOpen,
         tags: (c.tags || []).slice(0, 3),
         accent: ACCENT_COLORS[i % ACCENT_COLORS.length],
+        category: c.category || "Social",
       };
     });
   }, [initialData?.initialCollabs]);
@@ -99,6 +100,54 @@ export default function DiscoverFeed({ initialData, userId, onSearchNavigate }: 
 
   const trendingTags = initialData?.initialTrendingTags || [];
 
+  /* ── Search filtering ── */
+  const isSearching = searchQuery.trim().length > 0;
+  const q = searchQuery.trim().toLowerCase();
+
+  const filteredProfiles = useMemo(() => {
+    if (!isSearching) return allProfiles;
+    return allProfiles.filter((p) =>
+      p.name.toLowerCase().includes(q) ||
+      p.batch.toLowerCase().includes(q) ||
+      p.vibe.toLowerCase().includes(q) ||
+      p.tags.some((t: string) => t.toLowerCase().includes(q))
+    );
+  }, [allProfiles, q, isSearching]);
+
+  const filteredCollabs = useMemo(() => {
+    if (!isSearching) return collabs;
+    return collabs.filter((c: any) =>
+      c.title.toLowerCase().includes(q) ||
+      c.category.toLowerCase().includes(q) ||
+      c.subtitle.toLowerCase().includes(q) ||
+      c.tags.some((t: string) => t.toLowerCase().includes(q))
+    );
+  }, [collabs, q, isSearching]);
+
+  const filteredEvents = useMemo(() => {
+    if (!isSearching) return events;
+    return events.filter((e: any) =>
+      e.title.toLowerCase().includes(q) ||
+      e.type.toLowerCase().includes(q) ||
+      e.org.toLowerCase().includes(q) ||
+      (e.location && e.location.toLowerCase().includes(q))
+    );
+  }, [events, q, isSearching]);
+
+  const filteredClubs = useMemo(() => {
+    if (!isSearching) return clubs;
+    return clubs.filter((c: any) =>
+      c.name.toLowerCase().includes(q) ||
+      c.category.toLowerCase().includes(q)
+    );
+  }, [clubs, q, isSearching]);
+
+  const noResults = isSearching &&
+    filteredProfiles.length === 0 &&
+    filteredCollabs.length === 0 &&
+    filteredEvents.length === 0 &&
+    filteredClubs.length === 0;
+
   /* Real-time subscription for new users */
   useEffect(() => {
     const channel = supabase
@@ -118,19 +167,25 @@ export default function DiscoverFeed({ initialData, userId, onSearchNavigate }: 
     return () => { supabase.removeChannel(channel); };
   }, [userId, allProfiles.length]);
 
+  // Reset page when search changes
+  useEffect(() => {
+    setPage(0);
+  }, [searchQuery]);
+
+  const profilesToShow = isSearching ? filteredProfiles : allProfiles;
   const start = page * PAGE_SIZE;
-  const visibleProfiles = allProfiles.slice(start, start + PAGE_SIZE);
-  const canGoNext = start + PAGE_SIZE < allProfiles.length;
+  const visibleProfiles = profilesToShow.slice(start, start + PAGE_SIZE);
+  const canGoNext = start + PAGE_SIZE < profilesToShow.length;
   const canGoPrev = page > 0;
 
   const handleSeeNext = useCallback(() => {
     const nextStart = (page + 1) * PAGE_SIZE;
-    if (nextStart < allProfiles.length) {
+    if (nextStart < profilesToShow.length) {
       setPage(p => p + 1);
     } else {
       setPage(0);
     }
-  }, [page, allProfiles.length]);
+  }, [page, profilesToShow.length]);
 
   const handleSeePrev = useCallback(() => setPage(p => Math.max(0, p - 1)), []);
 
@@ -148,7 +203,7 @@ export default function DiscoverFeed({ initialData, userId, onSearchNavigate }: 
     }, { threshold: 0.1 });
     sections.forEach(s => obs.observe(s));
     return () => obs.disconnect();
-  }, [allProfiles]);
+  }, [allProfiles, filteredProfiles]);
 
   return (
     <main className="disc-feed" ref={feedRef}>
@@ -190,98 +245,121 @@ export default function DiscoverFeed({ initialData, userId, onSearchNavigate }: 
         <span className="disc-search-shortcut">⌘K</span>
       </div>
 
-      {/* Trending */}
-      <div className="disc-trending">
-        <span className="disc-trending-label">
-          <span className="disc-trending-dot" />
-          Trending
-        </span>
-        {trendingTags.length === 0 ? (
-          <span style={{ fontSize: 12, color: "rgba(255,255,255,0.35)" }}>No trending tags this week</span>
-        ) : (
-          trendingTags.map((tag: string) => (
-            <button key={tag} className="disc-trending-pill">#{tag}</button>
-          ))
-        )}
-      </div>
+      {/* No results message */}
+      {noResults && (
+        <div style={{ textAlign: "center", padding: "60px 20px", color: "rgba(255,255,255,0.4)" }}>
+          <div style={{ fontSize: 32, marginBottom: 12 }}>🔍</div>
+          <div style={{ fontSize: 15, fontWeight: 500, marginBottom: 6 }}>No results for &ldquo;{searchQuery}&rdquo;</div>
+          <div style={{ fontSize: 13 }}>Try a different search term, or press Enter to search all people</div>
+        </div>
+      )}
+
+      {/* Trending — hide while searching */}
+      {!isSearching && (
+        <div className="disc-trending">
+          <span className="disc-trending-label">
+            <span className="disc-trending-dot" />
+            Trending
+          </span>
+          {trendingTags.length === 0 ? (
+            <span style={{ fontSize: 12, color: "rgba(255,255,255,0.35)" }}>No trending tags this week</span>
+          ) : (
+            trendingTags.map((tag: string) => (
+              <button key={tag} className="disc-trending-pill">#{tag}</button>
+            ))
+          )}
+        </div>
+      )}
 
       {/* Top Matches */}
-      <div className="disc-reveal">
-        <div className="disc-sec-h">
-          <h2 className="disc-sec-title">Top Matches</h2>
-          <div style={{ display: "flex", gap: 8 }}>
-            {canGoPrev && (
-              <button className="disc-sec-action" onClick={handleSeePrev}>← Previous</button>
-            )}
-            <button className="disc-sec-action" onClick={handleSeeNext} disabled={loadingMore} style={{ opacity: loadingMore ? 0.5 : 1 }}>
-              {loadingMore ? "Loading…" : canGoNext || hasMore ? "See next →" : "Back to start →"}
-            </button>
+      {(!isSearching || filteredProfiles.length > 0) && (
+        <div className="disc-reveal">
+          <div className="disc-sec-h">
+            <h2 className="disc-sec-title">{isSearching ? "People" : "Top Matches"}</h2>
+            <div style={{ display: "flex", gap: 8 }}>
+              {canGoPrev && (
+                <button className="disc-sec-action" onClick={handleSeePrev}>← Previous</button>
+              )}
+              {profilesToShow.length > PAGE_SIZE && (
+                <button className="disc-sec-action" onClick={handleSeeNext} disabled={loadingMore} style={{ opacity: loadingMore ? 0.5 : 1 }}>
+                  {loadingMore ? "Loading…" : canGoNext || hasMore ? "See next →" : "Back to start →"}
+                </button>
+              )}
+            </div>
           </div>
-        </div>
-        <div className="disc-profiles-grid">
-          {visibleProfiles.map((p) => (
-            <ProfileCard key={p.id} {...p} />
-          ))}
-        </div>
-        {allProfiles.length > PAGE_SIZE && (
-          <div style={{ textAlign: "center", marginTop: 8, fontSize: 11, color: "rgba(255,255,255,0.3)" }}>
-            Showing {start + 1}–{Math.min(start + PAGE_SIZE, allProfiles.length)} of {allProfiles.length}
+          <div className="disc-profiles-grid">
+            {visibleProfiles.map((p) => (
+              <ProfileCard key={p.id} {...p} />
+            ))}
           </div>
-        )}
-      </div>
+          {profilesToShow.length > PAGE_SIZE && (
+            <div style={{ textAlign: "center", marginTop: 8, fontSize: 11, color: "rgba(255,255,255,0.3)" }}>
+              Showing {start + 1}–{Math.min(start + PAGE_SIZE, profilesToShow.length)} of {profilesToShow.length}
+            </div>
+          )}
+        </div>
+      )}
 
-      {/* Featured Match */}
-      <div className="disc-reveal">
-        <div className="disc-sec-h">
-          <h2 className="disc-sec-title">Featured Match</h2>
+      {/* Featured Match — hide while searching */}
+      {!isSearching && (
+        <div className="disc-reveal">
+          <div className="disc-sec-h">
+            <h2 className="disc-sec-title">Featured Match</h2>
+          </div>
+          <FeaturedMatch users={initialData?.initialFeedProfiles} />
         </div>
-        <FeaturedMatch users={initialData?.initialFeedProfiles} />
-      </div>
+      )}
 
       {/* Open Collabs */}
-      <div className="disc-reveal">
-        <div className="disc-sec-h">
-          <h2 className="disc-sec-title">Open Collabs</h2>
-          <Link href="/collabs" prefetch={false} className="disc-sec-action" style={{ textDecoration: "none" }}>Browse all →</Link>
-        </div>
-        {collabs.length === 0 ? (
-          <div style={{ textAlign: "center", padding: "30px", color: "rgba(255,255,255,0.4)", fontSize: 13 }}>No open collabs right now</div>
-        ) : (
-          <div className="disc-teams-grid">
-            {collabs.map((t: any, i: number) => <TeamCard key={i} {...t} />)}
+      {(!isSearching || filteredCollabs.length > 0) && (
+        <div className="disc-reveal">
+          <div className="disc-sec-h">
+            <h2 className="disc-sec-title">Open Collabs</h2>
+            <Link href="/collabs" prefetch={false} className="disc-sec-action" style={{ textDecoration: "none" }}>Browse all →</Link>
           </div>
-        )}
-      </div>
+          {(isSearching ? filteredCollabs : collabs).length === 0 ? (
+            <div style={{ textAlign: "center", padding: "30px", color: "rgba(255,255,255,0.4)", fontSize: 13 }}>No open collabs right now</div>
+          ) : (
+            <div className="disc-teams-grid">
+              {(isSearching ? filteredCollabs : collabs).map((t: any, i: number) => <TeamCard key={i} {...t} />)}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Events Near You */}
-      <div className="disc-reveal">
-        <div className="disc-sec-h">
-          <h2 className="disc-sec-title">Events Near You</h2>
-          <Link href="/events" prefetch={false} className="disc-sec-action" style={{ textDecoration: "none" }}>All events →</Link>
-        </div>
-        {events.length === 0 ? (
-          <div style={{ textAlign: "center", padding: "30px", color: "rgba(255,255,255,0.4)", fontSize: 13 }}>No upcoming events</div>
-        ) : (
-          <div className="disc-events-grid">
-            {events.map((e: any, i: number) => <EventCard key={i} {...e} />)}
+      {(!isSearching || filteredEvents.length > 0) && (
+        <div className="disc-reveal">
+          <div className="disc-sec-h">
+            <h2 className="disc-sec-title">Events Near You</h2>
+            <Link href="/events" prefetch={false} className="disc-sec-action" style={{ textDecoration: "none" }}>All events →</Link>
           </div>
-        )}
-      </div>
+          {(isSearching ? filteredEvents : events).length === 0 ? (
+            <div style={{ textAlign: "center", padding: "30px", color: "rgba(255,255,255,0.4)", fontSize: 13 }}>No upcoming events</div>
+          ) : (
+            <div className="disc-events-grid">
+              {(isSearching ? filteredEvents : events).map((e: any, i: number) => <EventCard key={i} {...e} />)}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Clubs & Cells */}
-      <div className="disc-reveal">
-        <div className="disc-sec-h">
-          <h2 className="disc-sec-title">Clubs &amp; Cells</h2>
-          <Link href="/clubs" prefetch={false} className="disc-sec-action" style={{ textDecoration: "none" }}>See all →</Link>
-        </div>
-        {clubs.length === 0 ? (
-          <div style={{ textAlign: "center", padding: "30px", color: "rgba(255,255,255,0.4)", fontSize: 13 }}>No clubs found</div>
-        ) : (
-          <div className="disc-clubs-row">
-            {clubs.map((c: any) => <ClubCard key={c.name} {...c} />)}
+      {(!isSearching || filteredClubs.length > 0) && (
+        <div className="disc-reveal">
+          <div className="disc-sec-h">
+            <h2 className="disc-sec-title">Clubs &amp; Cells</h2>
+            <Link href="/clubs" prefetch={false} className="disc-sec-action" style={{ textDecoration: "none" }}>See all →</Link>
           </div>
-        )}
-      </div>
+          {(isSearching ? filteredClubs : clubs).length === 0 ? (
+            <div style={{ textAlign: "center", padding: "30px", color: "rgba(255,255,255,0.4)", fontSize: 13 }}>No clubs found</div>
+          ) : (
+            <div className="disc-clubs-row">
+              {(isSearching ? filteredClubs : clubs).map((c: any) => <ClubCard key={c.name} {...c} />)}
+            </div>
+          )}
+        </div>
+      )}
     </main>
   );
 }
