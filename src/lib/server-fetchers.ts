@@ -299,7 +299,7 @@ export async function getDiscoverData(userId: string) {
   const todayISO = new Date().toISOString().split("T")[0];
 
   const p_me = supabase.from("users").select("id, full_name, stream, year, avatar_url, interests, clubs").eq("id", userId).single();
-  const p_users = supabase.from("users").select("id, full_name, stream, year, avatar_url, interests, clubs, currently_focused_on, created_at").neq("id", userId).limit(50);
+  const p_users = supabase.from("users").select("id, full_name, stream, year, avatar_url, interests, clubs, currently_focused_on, created_at").neq("id", userId);
   const p_votes = supabase.from("feed_votes").select("post_id, vote");
   const p_posts = supabase.from("feed_posts").select("id, user_id");
   const p_collabs = supabase.from("collabs").select("id, title, category, description, looking_for, tags, spots_total, spots_filled, status, author:author_id(full_name)").eq("status", "open").order("created_at", { ascending: false }).limit(20);
