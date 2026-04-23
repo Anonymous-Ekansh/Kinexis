@@ -414,6 +414,10 @@ export default function OnboardingPage() {
                   <option>International Relations and Governance Studies</option>
                   <option>Psychology</option>
                 </optgroup>
+                <optgroup label="ASU Programs">
+                  <option>BS Computer Science ASU</option>
+                  <option>BS Business ASU</option>
+                </optgroup>
               </select>
               <div className={`field-error ${errorsStep1.stream ? 'show' : ''}`}>{errorsStep1.stream}</div>
             </div>
