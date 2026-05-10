@@ -13,9 +13,6 @@ CREATE TABLE IF NOT EXISTS public.feed_posts (
   tags TEXT[] DEFAULT '{}',
   is_anonymous BOOLEAN DEFAULT false,
   image_url TEXT,
-  professor_name TEXT,
-  professor_subject TEXT,
-  professor_rating NUMERIC(2,1),
   comment_count INT DEFAULT 0,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -52,9 +49,6 @@ SELECT
   tags,
   is_anonymous,
   image_url,
-  professor_name,
-  professor_subject,
-  professor_rating,
   comment_count,
   created_at
 FROM public.feed_posts;

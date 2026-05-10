@@ -15,7 +15,7 @@ Live at **[kinexis.in](https://kinexis.in)**
 | **Discover** | Browse students by department, year and interest. Follow anyone. |
 | **Channels** | Follow clubs and get their posts, events and announcements in one feed. |
 | **Events** | Campus-wide event calendar, automatically populated from club emails. |
-| **Campus Feed** | Threads, confessions, memes, professor reviews — anonymous posting supported. |
+| **Campus Feed** | Threads, confessions, memes — anonymous posting supported. |
 | **Collabs** | Post what you want to build. Find teammates, co-founders, partners. |
 | **Messaging** | Request-based DMs — send an intro, chat opens when accepted. |
 

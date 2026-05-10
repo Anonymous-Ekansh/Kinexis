@@ -12,26 +12,22 @@ const POST_TYPE_LABELS: Record<string, string> = {
   thread: "Thread",
   confession: "Confession 🤫",
   meme: "Meme",
-  professor_rating: "Grade Professors",
 };
 const POST_TYPE_COLORS: Record<string, string> = {
   thread: "var(--lime)",
   confession: "var(--purple)",
   meme: "var(--cyan)",
-  professor_rating: "var(--coral)",
 };
 const POST_TYPE_BGS: Record<string, string> = {
   thread: "rgba(158,240,26,0.15)",
   confession: "rgba(167,139,250,0.15)",
   meme: "rgba(34,211,238,0.15)",
-  professor_rating: "rgba(251,113,133,0.15)",
 };
-const TABS = ["All", "Threads", "Confessions", "Memes", "Grade Professors", "Leaderboard"];
+const TABS = ["All", "Threads", "Confessions", "Memes", "Leaderboard"];
 const TAB_TO_TYPE: Record<string, string> = {
   Threads: "thread",
   Confessions: "confession",
   Memes: "meme",
-  "Grade Professors": "professor_rating",
 };
 
 /* ── Helpers ── */
@@ -49,11 +45,7 @@ function timeAgo(date: string): string {
   return `${Math.floor(s / 604800)}w ago`;
 }
 
-function renderStars(rating: number): string {
-  const full = Math.floor(rating);
-  const half = rating - full >= 0.5;
-  return "★".repeat(full) + (half ? "★" : "") + "☆".repeat(5 - full - (half ? 1 : 0));
-}
+
 
 /* ── Main Component ── */
 export default function FeedPageClient({ userId, initialData }: { userId: string, initialData: any }) {
@@ -74,9 +66,7 @@ export default function FeedPageClient({ userId, initialData }: { userId: string
   const [formTags, setFormTags] = useState<string[]>([]);
   const [formTagInput, setFormTagInput] = useState("");
   const [formAnon, setFormAnon] = useState(false);
-  const [formProfName, setFormProfName] = useState("");
-  const [formProfSubject, setFormProfSubject] = useState("");
-  const [formProfRating, setFormProfRating] = useState(0);
+
   const [formImageUrl, setFormImageUrl] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
@@ -122,11 +112,7 @@ export default function FeedPageClient({ userId, initialData }: { userId: string
       tags: formTags,
       is_anonymous: formAnon,
     };
-    if (modalType === "professor_rating") {
-      payload.professor_name = formProfName;
-      payload.professor_subject = formProfSubject;
-      payload.professor_rating = formProfRating;
-    }
+
     if (modalType === "meme" && formImageUrl) {
       payload.image_url = formImageUrl;
     }
@@ -146,11 +132,11 @@ export default function FeedPageClient({ userId, initialData }: { userId: string
     }
 
     // Log activity
-    logActivity({ userId, activityType: `post_${modalType === "professor_rating" ? "thread" : modalType}`, targetTitle: formTitle, targetId: newPost?.id, targetType: "post" });
+    logActivity({ userId, activityType: `post_${modalType}`, targetTitle: formTitle, targetId: newPost?.id, targetType: "post" });
 
     setShowModal(false);
     setFormTitle(""); setFormBody(""); setFormTags([]); setFormAnon(false);
-    setFormProfName(""); setFormProfSubject(""); setFormProfRating(0); setFormImageUrl("");
+    setFormImageUrl("");
     setModalType("thread");
   };
 
@@ -237,7 +223,7 @@ export default function FeedPageClient({ userId, initialData }: { userId: string
         <div className="fd-header-inner">
           <div className="fd-breadcrumb">Kinexis / <span>Campus Feed</span></div>
           <div className="fd-title">Campus Feed</div>
-          <div className="fd-sub">Threads, confessions, memes, professor ratings — everything on campus, unfiltered.</div>
+          <div className="fd-sub">Threads, confessions, memes — everything on campus, unfiltered.</div>
         </div>
       </div>
 
@@ -266,7 +252,7 @@ export default function FeedPageClient({ userId, initialData }: { userId: string
                   return (
                     <div key={u.id} className="fd-lb-item">
                       <div className="fd-lb-rank" style={{ color }}>{i + 1}</div>
-                      <div className="fd-lb-av" style={{ background: POST_TYPE_BGS[["thread","confession","meme","professor_rating"][i % 4]], color: POST_TYPE_COLORS[["thread","confession","meme","professor_rating"][i % 4]] }}>{getInitials(u.full_name)}</div>
+                      <div className="fd-lb-av" style={{ background: POST_TYPE_BGS[["thread","confession","meme"][i % 3]], color: POST_TYPE_COLORS[["thread","confession","meme"][i % 3]] }}>{getInitials(u.full_name)}</div>
                       <div className="fd-lb-info">
                         <div className="fd-lb-name">{u.full_name}</div>
                         <div className="fd-lb-meta">{u.stream || ""}{u.year ? ` · ${u.year}` : ""}</div>
@@ -290,12 +276,7 @@ export default function FeedPageClient({ userId, initialData }: { userId: string
                   {(selectedPost.tags || []).map((t: string, i: number) => <span key={i} className="fd-card-tag" onClick={(e) => { e.stopPropagation(); setActiveTag(t); setSelectedPost(null); }} style={{ cursor: "pointer" }}>{t}</span>)}
                 </div>
                 <div className="fd-card-title" style={{ fontSize: 20 }}>{selectedPost.title}</div>
-                {selectedPost.professor_rating && (
-                  <div className="fd-card-stars">
-                    <span className="stars">{renderStars(selectedPost.professor_rating)}</span>
-                    <span className="rating">{selectedPost.professor_rating} / 5</span>
-                  </div>
-                )}
+
                 <div className="fd-card-body-text" style={{ marginBottom: 16 }}>{selectedPost.body}</div>
                 {selectedPost.image_url && <Image src={selectedPost.image_url} alt="" width={800} height={400} className="fd-card-img" style={{ height: "auto" }} />}
                 <div className="fd-card-footer">
@@ -429,17 +410,7 @@ export default function FeedPageClient({ userId, initialData }: { userId: string
                             ))}
                           </div>
                           <div className="fd-card-title">{post.title}</div>
-                          {post.professor_name && (
-                            <div className="fd-card-title" style={{ fontSize: 14, color: "var(--sub)", fontWeight: 700, fontFamily: "'Syne',sans-serif", marginBottom: 4 }}>
-                              {post.professor_name} — {post.professor_subject}
-                            </div>
-                          )}
-                          {post.professor_rating && (
-                            <div className="fd-card-stars">
-                              <span className="stars">{renderStars(post.professor_rating)}</span>
-                              <span className="rating">{post.professor_rating} / 5</span>
-                            </div>
-                          )}
+
                           <div className="fd-card-body-text">{post.body}</div>
                           {post.image_url && <Image src={post.image_url} alt="" width={800} height={400} className="fd-card-img" style={{ height: "auto" }} />}
                           <div className="fd-card-footer">
@@ -479,20 +450,7 @@ export default function FeedPageClient({ userId, initialData }: { userId: string
             <label className="fd-modal-label">Title</label>
             <input className="fd-modal-input" placeholder="What's happening?" value={formTitle} onChange={e => setFormTitle(e.target.value)} />
 
-            {modalType === "professor_rating" && (
-              <>
-                <label className="fd-modal-label">Professor Name</label>
-                <input className="fd-modal-input" placeholder="e.g. Dr. Anand Sharma" value={formProfName} onChange={e => setFormProfName(e.target.value)} />
-                <label className="fd-modal-label">Subject</label>
-                <input className="fd-modal-input" placeholder="e.g. Data Structures & Algorithms" value={formProfSubject} onChange={e => setFormProfSubject(e.target.value)} />
-                <label className="fd-modal-label">Rating</label>
-                <div className="fd-modal-stars">
-                  {[1, 2, 3, 4, 5].map(s => (
-                    <span key={s} className="fd-modal-star" style={{ color: s <= formProfRating ? "#f59e0b" : "var(--muted)", cursor: "pointer" }} onClick={() => setFormProfRating(s)}>★</span>
-                  ))}
-                </div>
-              </>
-            )}
+
 
             {modalType === "meme" && (
               <>
@@ -560,7 +518,7 @@ export default function FeedPageClient({ userId, initialData }: { userId: string
             leaderboard.slice(0, 7).map((u, i) => {
               const rankColors = ["var(--lime)", "#f59e0b", "#fb923c"];
               const color = i < 3 ? rankColors[i] : "var(--muted)";
-              const types = ["thread", "confession", "meme", "professor_rating"];
+              const types = ["thread", "confession", "meme"];
               return (
                 <div key={u.id} className="fd-lb-item">
                   <div className="fd-lb-rank" style={{ color }}>{i + 1}</div>
@@ -595,10 +553,7 @@ export default function FeedPageClient({ userId, initialData }: { userId: string
             <div className="fd-qp-dot" style={{ background: "var(--purple)" }} />
             <span className="fd-qp-label">Post a confession anonymously</span>
           </div>
-          <div className="fd-qp-item" onClick={() => { setModalType("professor_rating"); setShowModal(true); }}>
-            <div className="fd-qp-dot" style={{ background: "var(--coral)" }} />
-            <span className="fd-qp-label">Grade a professor</span>
-          </div>
+
           <div className="fd-qp-item" onClick={() => { setModalType("meme"); setShowModal(true); }}>
             <div className="fd-qp-dot" style={{ background: "var(--cyan)" }} />
             <span className="fd-qp-label">Drop a meme</span>
