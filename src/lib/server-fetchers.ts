@@ -7,7 +7,7 @@ export async function getFeedData(userId: string) {
 
   // Phase 1: All independent queries in parallel
   const [postsRes, allVotesRes, allPostsRes, trendingRes, profileRes] = await Promise.all([
-    supabase.from("public_feed_posts").select("id, user_id, post_type, title, body, tags, image_url, is_anonymous, comment_count, created_at").order("created_at", { ascending: false }).limit(50),
+    supabase.from("public_feed_posts").select("*").order("created_at", { ascending: false }).limit(50),
     supabase.from("feed_votes").select("post_id, user_id, vote"),
     supabase.from("feed_posts").select("id, user_id"),
     supabase.from("feed_posts").select("tags").gte("created_at", weekAgo),
