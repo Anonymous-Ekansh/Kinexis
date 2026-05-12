@@ -63,9 +63,9 @@ export default function ReviewsTab({ userId }: { userId: string }) {
       {/* Sub-section pill switcher */}
       <div className="rv-pills">
         {([
-          { key: "cafes" as const, label: "☕ Cafes", emoji: "☕" },
-          { key: "courses" as const, label: "📚 CCC Courses", emoji: "📚" },
-          { key: "campus" as const, label: "🏫 Campus Things", emoji: "🏫" },
+          { key: "cafes" as const, label: "Cafes" },
+          { key: "courses" as const, label: "CCC Courses" },
+          { key: "campus" as const, label: "Campus Things" },
         ]).map(p => (
           <button
             key={p.key}
@@ -173,7 +173,7 @@ function CafesSection({ userId }: { userId: string }) {
         <button className="rv-back" onClick={() => { setSelectedCafe(null); setPosts([]); }}>← Back to cafes</button>
         
         <div className="rv-cafe-hero">
-          <div className="rv-cafe-hero-icon">☕</div>
+          <div className="rv-cafe-hero-icon">C</div>
           <div className="rv-cafe-hero-info">
             <div className="rv-cafe-hero-name">{selectedCafe.name}</div>
             <div className="rv-cafe-hero-loc">{selectedCafe.location}</div>
@@ -248,7 +248,7 @@ function CafesSection({ userId }: { userId: string }) {
           const bgs = ["rgba(158,240,26,0.12)", "rgba(34,211,238,0.12)", "rgba(167,139,250,0.12)", "rgba(251,113,133,0.12)"];
           const accent = accents[i % 4];
           const bg = bgs[i % 4];
-          const emojis = ["☕", "🍵", "🧁", "🍕", "🥪", "🍳", "🌯", "🥤", "🍕", "🍚", "🍦"];
+
           return (
             <div
               key={cafe.id}
@@ -257,7 +257,7 @@ function CafesSection({ userId }: { userId: string }) {
               onClick={() => openCafe(cafe)}
             >
               <div className="rv-cafe-emoji" style={{ background: bg, color: accent }}>
-                {emojis[i % emojis.length]}
+                {cafe.name.charAt(0)}
               </div>
               <div className="rv-cafe-name">{cafe.name}</div>
               <div className="rv-cafe-loc">{cafe.location}</div>
@@ -382,7 +382,7 @@ function CoursesSection({ userId }: { userId: string }) {
           reviews.map(review => (
             <div key={review.id} className="rv-review-card">
               <div className="rv-review-top">
-                <div className="rv-review-badge course">📚 Course</div>
+                <div className="rv-review-badge course">Course</div>
                 <StarDisplay rating={review.rating} />
               </div>
               <div className="rv-review-title">{review.course_title}</div>
@@ -511,7 +511,7 @@ function CampusSection({ userId }: { userId: string }) {
           reviews.map(review => (
             <div key={review.id} className="rv-review-card">
               <div className="rv-review-top">
-                <div className="rv-review-badge campus">🏫 Campus</div>
+                <div className="rv-review-badge campus">Campus</div>
                 <StarDisplay rating={review.rating} />
               </div>
               <div className="rv-review-title">{review.title}</div>
