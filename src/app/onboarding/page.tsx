@@ -624,7 +624,7 @@ export default function OnboardingPage() {
               <div className="f-av" style={{background: 'var(--coral)', color: '#fff'}}>SM</div>
               <div className="f-av" style={{background: 'var(--lime)'}}>+</div>
             </div>
-            <button className="btn-primary" style={{width: '100%', fontSize: '16px'}} onClick={() => router.push('/discover')}>
+            <button className="btn-primary" style={{width: '100%', fontSize: '16px'}} onClick={() => { window.location.href = '/discover'; }}>
               Start exploring people &rarr;
             </button>
           </div>
