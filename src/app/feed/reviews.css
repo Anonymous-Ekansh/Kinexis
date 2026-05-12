@@ -1,0 +1,232 @@
+/* ══════════════════════════════════
+   REVIEWS TAB — Campus Feed
+   ══════════════════════════════════ */
+
+/* wrapper */
+.rv-wrap{max-width:100%;}
+
+/* pill switcher */
+.rv-pills{display:flex;gap:6px;margin-bottom:24px;flex-wrap:wrap;}
+.rv-pill{
+  padding:8px 20px;border-radius:100px;font-size:13px;font-weight:600;
+  cursor:pointer;border:1.5px solid var(--border2);background:transparent;
+  color:var(--sub);transition:all .2s;font-family:'Inter',sans-serif;
+  white-space:nowrap;
+}
+.rv-pill:hover{border-color:rgba(255,255,255,0.22);color:#fff;}
+.rv-pill.active{
+  background:var(--lime);border-color:var(--lime);
+  color:#111;font-weight:800;
+}
+
+/* loading / empty */
+.rv-loading{text-align:center;padding:48px 20px;color:var(--muted);font-size:13px;}
+.rv-empty{text-align:center;padding:48px 20px;color:var(--muted);font-size:13px;
+  background:var(--surface);border:1px solid var(--border);border-radius:14px;}
+
+/* ── Cafes Grid ── */
+.rv-cafes-grid{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;
+}
+.rv-cafe-card{
+  background:var(--surface);border:1px solid var(--border);
+  border-left:3px solid var(--cafe-accent,var(--lime));
+  border-radius:14px;padding:20px;cursor:pointer;
+  transition:all .2s;position:relative;overflow:hidden;
+}
+.rv-cafe-card:hover{
+  transform:translateY(-3px);
+  box-shadow:0 12px 32px rgba(0,0,0,0.3);
+  border-color:var(--border2);
+}
+.rv-cafe-emoji{
+  width:44px;height:44px;border-radius:12px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:22px;margin-bottom:14px;flex-shrink:0;
+}
+.rv-cafe-name{
+  font-family:'Syne',sans-serif;font-size:16px;font-weight:800;
+  color:#fff;margin-bottom:4px;letter-spacing:-0.3px;
+}
+.rv-cafe-loc{font-size:11px;color:var(--muted);margin-bottom:8px;font-weight:500;}
+.rv-cafe-desc{
+  font-size:12px;color:var(--sub);line-height:1.5;margin-bottom:12px;
+  display:-webkit-box;-webkit-line-clamp:2;line-clamp:2;
+  -webkit-box-orient:vertical;overflow:hidden;
+}
+.rv-cafe-footer{display:flex;align-items:center;justify-content:space-between;}
+.rv-cafe-cta{font-size:12px;font-weight:700;transition:all .15s;}
+.rv-cafe-card:hover .rv-cafe-cta{transform:translateX(2px);}
+
+/* ── Cafe Thread / Hero ── */
+.rv-thread-wrap{max-width:100%;}
+.rv-back{
+  display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);
+  cursor:pointer;margin-bottom:16px;background:none;border:none;font-weight:600;
+  transition:color .15s;font-family:'Inter',sans-serif;
+}
+.rv-back:hover{color:#fff;}
+
+.rv-cafe-hero{
+  background:var(--surface);border:1px solid var(--border);border-radius:14px;
+  padding:24px;margin-bottom:20px;display:flex;align-items:flex-start;gap:18px;
+}
+.rv-cafe-hero-icon{
+  width:56px;height:56px;border-radius:14px;
+  background:rgba(158,240,26,0.12);
+  display:flex;align-items:center;justify-content:center;
+  font-size:28px;flex-shrink:0;
+}
+.rv-cafe-hero-info{flex:1;min-width:0;}
+.rv-cafe-hero-name{
+  font-family:'Syne',sans-serif;font-size:22px;font-weight:800;
+  color:#fff;letter-spacing:-0.5px;margin-bottom:4px;
+}
+.rv-cafe-hero-loc{font-size:12px;color:var(--muted);margin-bottom:6px;font-weight:500;}
+.rv-cafe-hero-desc{font-size:13px;color:var(--sub);line-height:1.55;}
+.rv-cafe-hero-stats{
+  display:flex;flex-direction:column;align-items:center;gap:4px;
+  flex-shrink:0;padding:8px 16px;
+  background:rgba(255,255,255,0.03);border:1px solid var(--border);
+  border-radius:12px;
+}
+.rv-hero-avg{
+  font-family:'Syne',sans-serif;font-size:28px;font-weight:800;
+  color:var(--lime);line-height:1;
+}
+.rv-hero-count{font-size:11px;color:var(--muted);white-space:nowrap;}
+
+/* ── Star Rating ── */
+.rv-star-picker{display:flex;gap:4px;margin-bottom:14px;}
+.rv-star{
+  cursor:pointer;transition:all .15s;color:var(--muted);
+  transform-origin:center;user-select:none;
+}
+.rv-star.filled{color:#f59e0b;}
+.rv-star:hover{transform:scale(1.2);}
+
+.rv-stars-display{display:inline-flex;align-items:center;gap:2px;}
+.rv-star-on{color:#f59e0b;letter-spacing:1px;}
+.rv-star-off{color:rgba(255,255,255,0.12);letter-spacing:1px;}
+.rv-rating-num{font-size:11px;color:var(--muted);margin-left:6px;font-weight:600;}
+
+/* ── Form Card ── */
+.rv-form-card{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:14px;padding:22px;margin-bottom:20px;
+}
+.rv-form-title{
+  font-family:'Syne',sans-serif;font-size:16px;font-weight:800;
+  color:#fff;margin-bottom:14px;letter-spacing:-0.3px;
+}
+.rv-form-label{
+  font-size:12px;color:var(--sub);font-weight:600;
+  margin-bottom:6px;display:block;
+}
+.rv-form-input{
+  width:100%;background:var(--surface2);border:1px solid var(--border2);
+  border-radius:8px;padding:10px 12px;font-size:13px;color:#fff;
+  font-family:'Inter',sans-serif;outline:none;margin-bottom:14px;
+  transition:border-color .15s;box-sizing:border-box;
+}
+.rv-form-input:focus{border-color:rgba(158,240,26,0.4);}
+.rv-form-textarea{
+  width:100%;background:var(--surface2);border:1px solid var(--border2);
+  border-radius:8px;padding:10px 12px;font-size:13px;color:#fff;
+  font-family:'Inter',sans-serif;outline:none;margin-bottom:14px;
+  resize:vertical;min-height:80px;transition:border-color .15s;box-sizing:border-box;
+}
+.rv-form-textarea:focus{border-color:rgba(158,240,26,0.4);}
+.rv-form-submit{
+  background:var(--lime);border:none;color:#111;border-radius:8px;
+  padding:10px 24px;font-size:13px;font-family:'Inter',sans-serif;
+  cursor:pointer;font-weight:800;transition:all .15s;
+}
+.rv-form-submit:hover{transform:translateY(-1px);box-shadow:0 6px 16px rgba(158,240,26,.25);}
+.rv-form-submit:disabled{opacity:.5;cursor:not-allowed;transform:none;box-shadow:none;}
+
+/* ── Post Card (Cafe thread) ── */
+.rv-posts-list{display:flex;flex-direction:column;gap:10px;}
+.rv-post-card{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:12px;padding:16px;transition:border-color .15s;
+}
+.rv-post-card:hover{border-color:var(--border2);}
+.rv-post-header{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+.rv-post-avatar{
+  width:32px;height:32px;border-radius:50%;font-size:11px;font-weight:800;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+}
+.rv-post-avatar.small{width:22px;height:22px;font-size:8px;}
+.rv-post-author-info{flex:1;min-width:0;display:flex;flex-direction:column;}
+.rv-post-author{font-size:12px;font-weight:700;color:#fff;}
+.rv-post-time{font-size:10px;color:var(--muted);}
+.rv-post-body{font-size:13px;color:var(--sub);line-height:1.55;}
+
+/* ── Section Header ── */
+.rv-section-header{
+  display:flex;align-items:flex-start;justify-content:space-between;
+  gap:16px;margin-bottom:20px;flex-wrap:wrap;
+}
+.rv-section-title{
+  font-family:'Syne',sans-serif;font-size:18px;font-weight:800;
+  color:#fff;letter-spacing:-0.5px;margin-bottom:4px;
+}
+.rv-section-sub{font-size:13px;color:var(--muted);line-height:1.5;}
+.rv-add-btn{
+  background:rgba(158,240,26,0.1);border:1px solid rgba(158,240,26,0.3);
+  border-radius:8px;padding:8px 18px;font-size:12px;font-weight:700;
+  color:var(--lime);cursor:pointer;transition:all .15s;
+  font-family:'Inter',sans-serif;white-space:nowrap;flex-shrink:0;
+}
+.rv-add-btn:hover{background:rgba(158,240,26,0.18);transform:translateY(-1px);}
+
+/* ── Review Card (Courses / Campus) ── */
+.rv-reviews-list{display:flex;flex-direction:column;gap:12px;}
+.rv-review-card{
+  background:var(--surface);border:1px solid var(--border);
+  border-left:3px solid var(--border);border-radius:14px;padding:18px;
+  transition:all .2s;
+}
+.rv-review-card:hover{
+  transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,0.2);
+  border-color:var(--border2);
+}
+.rv-review-top{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
+.rv-review-badge{
+  border-radius:20px;padding:3px 10px;font-size:10px;font-weight:700;
+}
+.rv-review-badge.course{
+  background:rgba(34,211,238,0.12);border:1px solid rgba(34,211,238,0.3);
+  color:var(--cyan);
+}
+.rv-review-badge.campus{
+  background:rgba(167,139,250,0.12);border:1px solid rgba(167,139,250,0.3);
+  color:var(--purple);
+}
+.rv-review-title{
+  font-family:'Syne',sans-serif;font-size:16px;font-weight:800;
+  color:#fff;margin-bottom:6px;letter-spacing:-0.3px;line-height:1.3;
+}
+.rv-review-body{
+  font-size:13px;color:var(--sub);line-height:1.55;margin-bottom:12px;
+  display:-webkit-box;-webkit-line-clamp:3;line-clamp:3;
+  -webkit-box-orient:vertical;overflow:hidden;
+}
+.rv-review-footer{
+  display:flex;align-items:center;justify-content:space-between;
+}
+.rv-review-author-wrap{display:flex;align-items:center;gap:6px;}
+.rv-review-author{font-size:12px;color:var(--sub);font-weight:600;}
+.rv-review-time{font-size:11px;color:var(--muted);}
+
+/* ── Responsive ── */
+@media(max-width:767px){
+  .rv-cafes-grid{grid-template-columns:1fr;}
+  .rv-cafe-hero{flex-direction:column;gap:14px;}
+  .rv-cafe-hero-stats{flex-direction:row;width:100%;justify-content:center;}
+  .rv-pills{gap:4px;}
+  .rv-pill{padding:7px 14px;font-size:12px;}
+  .rv-section-header{flex-direction:column;gap:10px;}
+  .rv-add-btn{align-self:flex-start;}
+}

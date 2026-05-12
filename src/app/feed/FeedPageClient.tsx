@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { supabase } from "@/lib/supabase";
 import { logActivity } from "@/lib/logActivity";
+import ReviewsTab from "./ReviewsTab";
 import "./feed.css";
 
 /* ── Constants ── */
@@ -23,7 +24,7 @@ const POST_TYPE_BGS: Record<string, string> = {
   confession: "rgba(167,139,250,0.15)",
   meme: "rgba(34,211,238,0.15)",
 };
-const TABS = ["All", "Threads", "Confessions", "Memes", "Leaderboard"];
+const TABS = ["All", "Threads", "Confessions", "Memes", "Reviews", "Leaderboard"];
 const TAB_TO_TYPE: Record<string, string> = {
   Threads: "thread",
   Confessions: "confession",
@@ -238,6 +239,14 @@ export default function FeedPageClient({ userId, initialData }: { userId: string
       <div className="fd-main">
         {loading ? (
           <div className="fd-loading">Loading campus feed...</div>
+        ) : activeTab === "Reviews" ? (
+          /* ── Reviews Tab ── */
+          <div className="fd-layout">
+            <div>
+              <ReviewsTab userId={userId} />
+            </div>
+            <div className="fd-sidebar">{renderSidebar()}</div>
+          </div>
         ) : activeTab === "Leaderboard" ? (
           /* ── Full Leaderboard ── */
           <div className="fd-layout">
