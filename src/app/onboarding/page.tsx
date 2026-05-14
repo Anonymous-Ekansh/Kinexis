@@ -8,7 +8,7 @@ import { useAuth } from "@/contexts/AuthContext";
 export default function OnboardingPage() {
   const router = useRouter();
   const { user } = useAuth();
-  
+
   const [step, setStep] = useState<number | 'finish'>(1);
   const [loading, setLoading] = useState(false);
   const [globalError, setGlobalError] = useState("");
@@ -17,25 +17,25 @@ export default function OnboardingPage() {
   const [stream, setStream] = useState("");
   const [year, setYear] = useState("");
   const [batchYear, setBatchYear] = useState("");
-  const [errorsStep1, setErrorsStep1] = useState<{name?:string, stream?:string, year?:string, batch?:string}>({});
+  const [errorsStep1, setErrorsStep1] = useState<{ name?: string, stream?: string, year?: string, batch?: string }>({});
 
   const [interests, setInterests] = useState<string[]>([]);
   const [interestInput, setInterestInput] = useState("");
-  const [interestOptions] = useState(["Music","Filmmaking","Photography","Startups","AI & ML","Finance","Writing","Theatre","Policy","Gaming","Sports","Design","Research","Debating","Philosophy","Environment"]);
-  
+  const [interestOptions] = useState(["Music", "Filmmaking", "Photography", "Startups", "AI & ML", "Finance", "Writing", "Theatre", "Policy", "Gaming", "Sports", "Design", "Research", "Debating", "Philosophy", "Environment"]);
+
   const [lookingFor, setLookingFor] = useState<string[]>([]);
-  const lookingForOptions = ["Build something","Hackathon team","Startup idea","Creative projects","Meet new people","Just exploring","Events & fests","Study partner"];
-  
-  const [errorsStep2, setErrorsStep2] = useState<{interests?:string, intent?:string}>({});
+  const lookingForOptions = ["Build something", "Hackathon team", "Startup idea", "Creative projects", "Meet new people", "Just exploring", "Events & fests", "Study partner"];
+
+  const [errorsStep2, setErrorsStep2] = useState<{ interests?: string, intent?: string }>({});
 
   const [bio, setBio] = useState("");
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [clubs, setClubs] = useState<string[]>([]);
   const [clubInput, setClubInput] = useState("");
-  const [clubOptions] = useState(["Music Club","Coding Club","Drama Club","Photography Club","MUN Club","Robotics Club","Literary Club","Chess Club"]);
+  const [clubOptions] = useState(["Music Club", "Coding Club", "Drama Club", "Photography Club", "MUN Club", "Robotics Club", "Literary Club", "Chess Club"]);
   const [focus, setFocus] = useState("");
-  const [errorsStep3, setErrorsStep3] = useState<{focus?:string}>({});
+  const [errorsStep3, setErrorsStep3] = useState<{ focus?: string }>({});
 
   const addTag = (val: string, type: 'interests' | 'clubs') => {
     const cleanVal = val.replace(/^[\u{1F300}-\u{1FFFF}][\s]*/u, '').trim().replace(/,/g, '');
@@ -43,7 +43,7 @@ export default function OnboardingPage() {
     if (type === 'interests') {
       if (interests.length < 10 && !interests.includes(cleanVal)) {
         setInterests([...interests, cleanVal]);
-        setErrorsStep2({...errorsStep2, interests: undefined});
+        setErrorsStep2({ ...errorsStep2, interests: undefined });
       }
       setInterestInput("");
     } else {
@@ -68,7 +68,7 @@ export default function OnboardingPage() {
     } else {
       const newLF = [...lookingFor, intent];
       setLookingFor(newLF);
-      if (newLF.length > 0) setErrorsStep2({...errorsStep2, intent: undefined});
+      if (newLF.length > 0) setErrorsStep2({ ...errorsStep2, intent: undefined });
     }
   };
 
@@ -89,7 +89,7 @@ export default function OnboardingPage() {
     if (!year) errs.year = "Please select your year";
     const batch = batchYear.trim();
     if (!batch || batch.length < 4 || isNaN(Number(batch))) errs.batch = "Please enter your batch year";
-    
+
     setErrorsStep1(errs);
     return Object.keys(errs).length === 0;
   };
@@ -118,7 +118,7 @@ export default function OnboardingPage() {
       submitForm();
     } else {
       setStep(n);
-      window.scrollTo({top: 0, behavior: 'smooth'});
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
 
@@ -135,7 +135,7 @@ export default function OnboardingPage() {
         const { data: uploadData, error: uploadError } = await supabase.storage
           .from('avatars')
           .upload(`${user.id}/${user.id}.jpg`, photoFile, { upsert: true });
-        
+
         if (uploadError) throw new Error("Failed to upload photo: " + uploadError.message);
 
         const { data: { publicUrl } } = supabase.storage
@@ -159,7 +159,7 @@ export default function OnboardingPage() {
       }, { onConflict: 'id' });
 
       if (upsertError) throw new Error("Failed to save profile: " + upsertError.message);
-      
+
       setStep('finish');
     } catch (err: any) {
       setGlobalError(err.message || "An unexpected error occurred.");
@@ -168,11 +168,12 @@ export default function OnboardingPage() {
     }
   };
 
-  const initials = name ? name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0,2) : '?';
+  const initials = name ? name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2) : '?';
 
   return (
     <>
-      <style dangerouslySetInnerHTML={{ __html: `
+      <style dangerouslySetInnerHTML={{
+        __html: `
         * { box-sizing:border-box; margin:0; padding:0; }
         html { scroll-behavior:smooth; }
         body {
@@ -325,17 +326,17 @@ export default function OnboardingPage() {
         <div className="logo-svg">
           <svg width="148" height="38" viewBox="0 0 420 120" fill="none" xmlns="http://www.w3.org/2000/svg">
             <g transform="translate(18,28) scale(0.38)">
-              <circle cx="36" cy="20" r="5.5" fill="#9EF01A"/>
-              <circle cx="36" cy="60" r="7.5" fill="#9EF01A"/>
-              <circle cx="36" cy="100" r="5.5" fill="#9EF01A"/>
-              <line x1="36" y1="25.5" x2="36" y2="52.5" stroke="#9EF01A" strokeWidth="4.5" strokeLinecap="round"/>
-              <line x1="36" y1="67.5" x2="36" y2="94.5" stroke="#9EF01A" strokeWidth="4.5" strokeLinecap="round"/>
-              <circle cx="92" cy="20" r="5.5" fill="#9EF01A"/>
-              <path d="M43 53 Q60 36 87 23" stroke="#9EF01A" strokeWidth="4.5" strokeLinecap="round" fill="none"/>
-              <circle cx="92" cy="100" r="5.5" fill="#9EF01A"/>
-              <path d="M43 67 Q60 84 87 97" stroke="#9EF01A" strokeWidth="4.5" strokeLinecap="round" fill="none"/>
+              <circle cx="36" cy="20" r="5.5" fill="#9EF01A" />
+              <circle cx="36" cy="60" r="7.5" fill="#9EF01A" />
+              <circle cx="36" cy="100" r="5.5" fill="#9EF01A" />
+              <line x1="36" y1="25.5" x2="36" y2="52.5" stroke="#9EF01A" strokeWidth="4.5" strokeLinecap="round" />
+              <line x1="36" y1="67.5" x2="36" y2="94.5" stroke="#9EF01A" strokeWidth="4.5" strokeLinecap="round" />
+              <circle cx="92" cy="20" r="5.5" fill="#9EF01A" />
+              <path d="M43 53 Q60 36 87 23" stroke="#9EF01A" strokeWidth="4.5" strokeLinecap="round" fill="none" />
+              <circle cx="92" cy="100" r="5.5" fill="#9EF01A" />
+              <path d="M43 67 Q60 84 87 97" stroke="#9EF01A" strokeWidth="4.5" strokeLinecap="round" fill="none" />
             </g>
-            <line x1="65" y1="16" x2="65" y2="104" stroke="rgba(255,255,255,0.07)" strokeWidth="1"/>
+            <line x1="65" y1="16" x2="65" y2="104" stroke="rgba(255,255,255,0.07)" strokeWidth="1" />
             <text x="76" y="68" fontFamily="'Syne','Inter',sans-serif" fontSize="42" fontWeight="800" fill="#FFFFFF" letterSpacing="-1.5">kinexis</text>
           </svg>
         </div>
@@ -366,12 +367,12 @@ export default function OnboardingPage() {
 
             <div className="field">
               <label>Your name <span className="req">*</span></label>
-              <input 
-                type="text" 
+              <input
+                type="text"
                 value={name}
-                onChange={(e) => {setName(e.target.value); setErrorsStep1({...errorsStep1, name: undefined});}}
+                onChange={(e) => { setName(e.target.value); setErrorsStep1({ ...errorsStep1, name: undefined }); }}
                 onKeyDown={(e) => e.key === 'Enter' && goToStep(2)}
-                placeholder="What do people call you?" 
+                placeholder="What do people call you?"
                 autoComplete="off"
                 className={errorsStep1.name ? 'error' : ''}
               />
@@ -380,9 +381,9 @@ export default function OnboardingPage() {
 
             <div className="field">
               <label>Your stream / department <span className="req">*</span></label>
-              <select 
-                value={stream} 
-                onChange={(e) => {setStream(e.target.value); setErrorsStep1({...errorsStep1, stream: undefined});}}
+              <select
+                value={stream}
+                onChange={(e) => { setStream(e.target.value); setErrorsStep1({ ...errorsStep1, stream: undefined }); }}
                 className={errorsStep1.stream ? 'error' : ''}
               >
                 <option value="" disabled>Pick your stream</option>
@@ -392,11 +393,11 @@ export default function OnboardingPage() {
                   <option>Electrical and Computer Engineering</option>
                   <option>Mechanical Engineering</option>
                   <option>Chemical Engineering</option>
-                  <option>Biotechnology</option>
                   <option>Civil Engineering</option>
                 </optgroup>
                 <optgroup label="Sciences">
                   <option>Chemistry</option>
+                  <option>Biotechnology</option>
                   <option>Mathematics</option>
                   <option>Physics</option>
                 </optgroup>
@@ -425,9 +426,9 @@ export default function OnboardingPage() {
             <div className="field-row">
               <div className="field">
                 <label>Year / Batch <span className="req">*</span></label>
-                <select 
-                  value={year} 
-                  onChange={(e) => {setYear(e.target.value); setErrorsStep1({...errorsStep1, year: undefined});}}
+                <select
+                  value={year}
+                  onChange={(e) => { setYear(e.target.value); setErrorsStep1({ ...errorsStep1, year: undefined }); }}
                   className={errorsStep1.year ? 'error' : ''}
                 >
                   <option value="" disabled>Your year</option>
@@ -441,11 +442,11 @@ export default function OnboardingPage() {
               </div>
               <div className="field">
                 <label>Batch year <span className="req">*</span></label>
-                <input 
-                  type="text" 
+                <input
+                  type="text"
                   value={batchYear}
-                  onChange={(e) => {setBatchYear(e.target.value); setErrorsStep1({...errorsStep1, batch: undefined});}}
-                  placeholder="e.g. 2027" 
+                  onChange={(e) => { setBatchYear(e.target.value); setErrorsStep1({ ...errorsStep1, batch: undefined }); }}
+                  placeholder="e.g. 2027"
                   maxLength={4}
                   className={errorsStep1.batch ? 'error' : ''}
                 />
@@ -471,8 +472,8 @@ export default function OnboardingPage() {
                     {t}<button type="button" onClick={() => removeTag(t, 'interests')} aria-label="remove">×</button>
                   </span>
                 ))}
-                <input 
-                  type="text" 
+                <input
+                  type="text"
                   id="interestInput"
                   value={interestInput}
                   onChange={e => setInterestInput(e.target.value)}
@@ -482,15 +483,15 @@ export default function OnboardingPage() {
                       if (interests.length > 0) setInterests(interests.slice(0, -1));
                     }
                   }}
-                  placeholder="Type & press Enter to add..." 
+                  placeholder="Type & press Enter to add..."
                 />
               </div>
               <div className={`field-error ${errorsStep2.interests ? 'show' : ''}`}>{errorsStep2.interests}</div>
-              
+
               <div className="tag-suggestions">
                 {interestOptions.map(opt => (
-                  <span key={opt} 
-                    className={`tag-suggest ${interests.includes(opt) ? 'selected' : ''}`} 
+                  <span key={opt}
+                    className={`tag-suggest ${interests.includes(opt) ? 'selected' : ''}`}
                     onClick={() => interests.includes(opt) ? removeTag(opt, 'interests') : addTag(opt, 'interests')}
                   >
                     {opt}
@@ -499,7 +500,7 @@ export default function OnboardingPage() {
               </div>
             </div>
 
-            <div className="field" style={{marginTop: '20px'}}>
+            <div className="field" style={{ marginTop: '20px' }}>
               <label>What are you looking for on Kinexis? <span className="req">*</span></label>
               <div className={`field-error ${errorsStep2.intent ? 'show' : ''}`}>{errorsStep2.intent}</div>
               <div className={`intent-grid ${errorsStep2.intent ? 'error' : ''}`}>
@@ -508,7 +509,7 @@ export default function OnboardingPage() {
                     <span className="intent-icon"></span>
                     <span>{opt}</span>
                     <div className="intent-check">
-                      <svg width="8" height="6" viewBox="0 0 8 6" fill="none"><path d="M1 3l2 2 4-4" stroke="#111" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                      <svg width="8" height="6" viewBox="0 0 8 6" fill="none"><path d="M1 3l2 2 4-4" stroke="#111" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
                     </div>
                   </div>
                 ))}
@@ -528,8 +529,8 @@ export default function OnboardingPage() {
 
             <div className="avatar-upload">
               <div className="avatar-preview" onClick={() => document.getElementById('avatarFileInput')?.click()}>
-                <span className="avatar-initials" style={{display: photoPreview ? 'none' : 'block'}}>{initials}</span>
-                {photoPreview ? <img src={photoPreview} alt="" style={{display: 'block'}} /> : null}
+                <span className="avatar-initials" style={{ display: photoPreview ? 'none' : 'block' }}>{initials}</span>
+                {photoPreview ? <img src={photoPreview} alt="" style={{ display: 'block' }} /> : null}
                 <input id="avatarFileInput" type="file" accept="image/*" onChange={previewAvatar} />
               </div>
               <div className="avatar-info">
@@ -540,14 +541,14 @@ export default function OnboardingPage() {
 
             <div className="field">
               <label>One-line bio <span className="optional-badge">optional</span></label>
-              <input 
-                type="text" 
+              <input
+                type="text"
                 value={bio}
                 onChange={e => setBio(e.target.value)}
-                placeholder="e.g. I write poetry and build apps — yes, both." 
+                placeholder="e.g. I write poetry and build apps — yes, both."
                 maxLength={80}
               />
-              <div style={{fontSize: '11px', color: 'var(--muted)', marginTop: '5px', textAlign: 'right'}}>
+              <div style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '5px', textAlign: 'right' }}>
                 {bio.length} / 80
               </div>
             </div>
@@ -560,9 +561,9 @@ export default function OnboardingPage() {
                     {t}<button type="button" onClick={() => removeTag(t, 'clubs')} aria-label="remove">×</button>
                   </span>
                 ))}
-                <input 
-                  type="text" 
-                  id="clubInput" 
+                <input
+                  type="text"
+                  id="clubInput"
                   value={clubInput}
                   onChange={e => setClubInput(e.target.value)}
                   onKeyDown={e => {
@@ -571,13 +572,13 @@ export default function OnboardingPage() {
                       if (clubs.length > 0) setClubs(clubs.slice(0, -1));
                     }
                   }}
-                  placeholder="Type club name & press Enter..." 
+                  placeholder="Type club name & press Enter..."
                 />
               </div>
               <div className="tag-suggestions">
                 {clubOptions.map(opt => (
-                  <span key={opt} 
-                    className={`tag-suggest ${clubs.includes(opt) ? 'selected' : ''}`} 
+                  <span key={opt}
+                    className={`tag-suggest ${clubs.includes(opt) ? 'selected' : ''}`}
                     onClick={() => clubs.includes(opt) ? removeTag(opt, 'clubs') : addTag(opt, 'clubs')}
                   >
                     {opt}
@@ -589,11 +590,11 @@ export default function OnboardingPage() {
 
             <div className="field">
               <label>What are you currently focused on? <span className="req">*</span></label>
-              <input 
-                type="text" 
+              <input
+                type="text"
                 value={focus}
-                onChange={(e) => {setFocus(e.target.value); setErrorsStep3({...errorsStep3, focus: undefined});}}
-                placeholder="Learning guitar / Building an app / Preparing for CAT — anything goes" 
+                onChange={(e) => { setFocus(e.target.value); setErrorsStep3({ ...errorsStep3, focus: undefined }); }}
+                placeholder="Learning guitar / Building an app / Preparing for CAT — anything goes"
                 maxLength={80}
                 className={errorsStep3.focus ? 'error' : ''}
               />
@@ -601,7 +602,7 @@ export default function OnboardingPage() {
             </div>
 
             {globalError && (
-              <div className="field-error show" style={{textAlign: 'center', marginBottom: '10px'}}>{globalError}</div>
+              <div className="field-error show" style={{ textAlign: 'center', marginBottom: '10px' }}>{globalError}</div>
             )}
 
             <div className="btn-row">
@@ -615,16 +616,16 @@ export default function OnboardingPage() {
 
           <div className={`step ${step === 'finish' ? 'active' : ''}`} id="step-finish">
             <div className="finish-icon">🚀</div>
-            <div className="finish-title">You&apos;re in, <span id="finishName" style={{color: 'var(--lime)'}}>{name.split(' ')[0] || 'friend'}</span>.</div>
+            <div className="finish-title">You&apos;re in, <span id="finishName" style={{ color: 'var(--lime)' }}>{name.split(' ')[0] || 'friend'}</span>.</div>
             <div className="finish-sub">Your profile is live. Time to find your people — students across every stream are already here.</div>
             <div className="finish-avatars">
-              <div className="f-av" style={{background: 'var(--lime)'}}>AS</div>
-              <div className="f-av" style={{background: 'var(--cyan)'}}>PK</div>
-              <div className="f-av" style={{background: 'var(--purple)', color: '#fff'}}>RV</div>
-              <div className="f-av" style={{background: 'var(--coral)', color: '#fff'}}>SM</div>
-              <div className="f-av" style={{background: 'var(--lime)'}}>+</div>
+              <div className="f-av" style={{ background: 'var(--lime)' }}>AS</div>
+              <div className="f-av" style={{ background: 'var(--cyan)' }}>PK</div>
+              <div className="f-av" style={{ background: 'var(--purple)', color: '#fff' }}>RV</div>
+              <div className="f-av" style={{ background: 'var(--coral)', color: '#fff' }}>SM</div>
+              <div className="f-av" style={{ background: 'var(--lime)' }}>+</div>
             </div>
-            <button className="btn-primary" style={{width: '100%', fontSize: '16px'}} onClick={() => { window.location.href = '/discover'; }}>
+            <button className="btn-primary" style={{ width: '100%', fontSize: '16px' }} onClick={() => { window.location.href = '/discover'; }}>
               Start exploring people &rarr;
             </button>
           </div>
