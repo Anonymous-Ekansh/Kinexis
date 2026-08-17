@@ -79,7 +79,7 @@ const resources: ResourceItem[] = [
   },
   {
     title: "Find All Labs",
-    description: "Locate labs across campus — CS labs, electronics labs, physics labs, and more.",
+    description: "Locate labs across campus including CS, electronics, physics, and more.",
     icon: "flask",
     accent: "cyan",
     href: "https://rslookup.abs.moe/lab",
@@ -155,7 +155,7 @@ const resources: ResourceItem[] = [
   },
   {
     title: "Google Earth 3D View",
-    description: "Explore the campus in immersive 3D with Google Earth — great for new students.",
+    description: "Explore the campus in immersive 3D with Google Earth, great for new students.",
     icon: "globe",
     accent: "lime",
     href: "https://earth.google.com/earth/d/1rJBpRt96G15WO5OWFTcx9jBcj6lwozJH?usp=sharing",
@@ -224,7 +224,7 @@ const resources: ResourceItem[] = [
   // ── UG Handbook ──
   {
     title: "UG Handbook 2025",
-    description: "The official undergraduate handbook — academic policies, grading system, rules, and more.",
+    description: "The official undergraduate handbook with academic policies, grading system, rules, and more.",
     icon: "book",
     accent: "purple",
     href: "/resources/StudentHandbook2025.pdf",
@@ -234,7 +234,7 @@ const resources: ResourceItem[] = [
 
   // ── SNU Links & Setup ──
   {
-    title: "SNU Wiki — Setup Guide",
+    title: "SNU Wiki Setup Guide",
     description: "Official wiki for WiFi setup, Net ID activation, email configuration, and IT resources.",
     icon: "link",
     accent: "cyan",
@@ -244,7 +244,7 @@ const resources: ResourceItem[] = [
   },
   {
     title: "SNU Links Guide",
-    description: "One PDF with all essential SNU links, portals, and how-tos — bookmark this.",
+    description: "One PDF with all essential SNU links, portals, and how-tos. Bookmark this.",
     icon: "fileText",
     accent: "lime",
     href: "/resources/SNULinksGuide.pdf",
@@ -413,7 +413,7 @@ export default function ResourcesPageClient() {
             Every resource,<br /><em>one place.</em>
           </h1>
           <p className="res-hero-sub">
-            All the <b>tools, documents, and links</b> you need across your SNU journey — from GPA calculators to campus maps to course guides.
+            All the <b>tools, documents, and links</b> you need across your SNU journey, from GPA calculators to campus maps and course guides.
           </p>
           <div className="res-search">
             <svg className="res-search-icon" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -423,7 +423,7 @@ export default function ResourcesPageClient() {
             <input
               id="resourceSearch"
               type="text"
-              placeholder="Search resources — e.g. GPA, labs, WiFi..."
+              placeholder="Search resources (e.g. GPA, labs, WiFi...)"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
@@ -465,8 +465,8 @@ export default function ResourcesPageClient() {
                         className={`res-card${isPdf ? " res-card-pdf" : ""}`}
                         data-accent={item.accent}
                         href={item.href}
-                        target={isExternal ? "_blank" : undefined}
-                        rel={isExternal ? "noopener noreferrer" : undefined}
+                        target={isExternal || (isPdf && item.href !== "#") ? "_blank" : undefined}
+                        rel={isExternal || (isPdf && item.href !== "#") ? "noopener noreferrer" : undefined}
                         style={item.href === "#" ? { cursor: "default" } : undefined}
                       >
                         <div className="res-card-icon">
