@@ -357,7 +357,7 @@ export default function Home() {
             <a>Projects</a>
             <a>Events</a>
             <a>Clubs</a>
-            <a>Streams</a>
+            <Link href="/resources" prefetch={false}>Resources</Link>
           </div>
           <div className="nav-r">
             {authUser ? (
@@ -404,7 +404,7 @@ export default function Home() {
             <a onClick={toggleMenu}>Projects</a>
             <Link href="/events" prefetch={false} onClick={toggleMenu}>Events</Link>
             <a onClick={toggleMenu}>Clubs</a>
-            <a onClick={toggleMenu}>Streams</a>
+            <Link href="/resources" prefetch={false} onClick={toggleMenu}>Resources</Link>
           </div>
           <div className="mobile-menu-ctas">
             {authUser ? (

@@ -32,7 +32,11 @@ export async function middleware(request: NextRequest) {
     request.nextUrl.pathname.startsWith("/signup") ||
     request.nextUrl.pathname.startsWith("/auth/callback");
 
-  if (!user && !isAuthRoute && request.nextUrl.pathname !== "/") {
+  const isPublicRoute =
+    request.nextUrl.pathname === "/" ||
+    request.nextUrl.pathname.startsWith("/resources");
+
+  if (!user && !isAuthRoute && !isPublicRoute) {
     const redirectResponse = NextResponse.redirect(new URL("/login", request.url));
     supabaseResponse.cookies.getAll().forEach((cookie) => {
       redirectResponse.cookies.set(cookie);
