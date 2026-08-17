@@ -3,6 +3,7 @@
 import { useEffect, useState, useMemo, useCallback } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
+import TopNav from "@/components/TopNav";
 import "./resources.css";
 
 /* ═══════════════════════════════════════════
@@ -104,6 +105,15 @@ const resources: ResourceItem[] = [
     section: "academic",
   },
   {
+    title: "Timetable Planner",
+    description: "Plan your semester timetable and check for class collisions.",
+    icon: "calendar",
+    accent: "purple",
+    href: "https://scooby.rohitjg.com/collision-checker",
+    type: "link",
+    section: "academic",
+  },
+  {
     title: "Amenities & Timings",
     description: "Check timings for the mess, gym, library, sports complex, and other campus amenities.",
     icon: "clock",
@@ -155,51 +165,69 @@ const resources: ResourceItem[] = [
 
   // ── Swayam ──
   {
-    title: "Swayam Course Guide",
-    description: "Complete guide to enrolling, completing, and getting credits for Swayam/NPTEL courses.",
+    title: "Academic Policy (Swayam)",
+    description: "Complete academic policy and guidelines for enrolling and getting credits for Swayam/NPTEL courses.",
     icon: "fileText",
     accent: "purple",
-    href: "#",
+    href: "/resources/AcademicPolicySwayam.pdf",
     type: "pdf",
     section: "swayam",
   },
 
   // ── CCC / UWE / Major Elective ──
   {
-    title: "CCC Course Guide",
-    description: "Comprehensive guide to Cross-cutting Capacity courses — selections, credits, and tips.",
+    title: "All Course Information",
+    description: "All course information including CCC, UWE, Majors.",
+    icon: "link",
+    accent: "purple",
+    href: "https://snuncr.sharepoint.com/sites/CourseManagement/Shared%20Documents/Forms/AllItems.aspx?id=%2Fsites%2FCourseManagement%2FShared%20Documents%2FCurrent%20Course%20Outline%2FMonsoon%202026%20PDFs&viewid=5f8b6019%2D4eef%2D4cab%2Da0ef%2Dfc7ebd57c9f4&as=json",
+    type: "link",
+    section: "courses",
+  },
+  {
+    title: "CCC Bidding User Manual",
+    description: "The official user manual for bidding on Cross-cutting Capacity courses.",
     icon: "fileText",
     accent: "cyan",
-    href: "#",
+    href: "/resources/CCCBiddingUserManual.pdf",
     type: "pdf",
     section: "courses",
   },
   {
-    title: "UWE Course Guide",
-    description: "Everything you need to know about University Wide Electives — options and recommendations.",
+    title: "CCC / UWE / Minors Guide (Unofficial)",
+    description: "A comprehensive unofficial guide for the 2029 batch regarding CCC, UWE, and minor electives.",
     icon: "fileText",
     accent: "lime",
-    href: "#",
+    href: "/resources/CCCUWEMinorsElectiveGuide.pdf",
     type: "pdf",
     section: "courses",
   },
   {
-    title: "Major Elective Guide",
-    description: "How to choose the right major electives — department-wise breakdown and prerequisites.",
+    title: "Course Bidding Guide (Unofficial)",
+    description: "An unofficial guide with tips and strategies for successful course bidding.",
     icon: "fileText",
     accent: "coral",
-    href: "#",
+    href: "/resources/CourseBiddingUnofficialGuide.pdf",
+    type: "pdf",
+    section: "courses",
+  },
+  {
+    title: "Minor Programs Requirement",
+    description: "Official requirements and details for pursuing a minor program.",
+    icon: "fileText",
+    accent: "purple",
+    href: "/resources/MinorPrograms.pdf",
     type: "pdf",
     section: "courses",
   },
 
   // ── UG Handbook ──
   {
-    title: "UG Handbook",
+    title: "UG Handbook 2025",
     description: "The official undergraduate handbook — academic policies, grading system, rules, and more.",
     icon: "book",
     accent: "purple",
-    href: "#",
+    href: "/resources/StudentHandbook2025.pdf",
     type: "pdf",
     section: "handbook",
   },
@@ -219,7 +247,7 @@ const resources: ResourceItem[] = [
     description: "One PDF with all essential SNU links, portals, and how-tos — bookmark this.",
     icon: "fileText",
     accent: "lime",
-    href: "#",
+    href: "/resources/SNULinksGuide.pdf",
     type: "pdf",
     section: "setup",
   },
@@ -305,38 +333,6 @@ const sections: SectionConfig[] = [
   },
 ];
 
-/* ═══════════════════════════════════════════
-   LOGO SVG (reused from landing page)
-   ═══════════════════════════════════════════ */
-
-function LogoSVG() {
-  return (
-    <svg width={180} height={38} viewBox="0 15 420 70" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <g transform="translate(18,18) scale(0.38)">
-        <circle cx="36" cy="20" r="5.5" fill="#9EF01A" />
-        <circle cx="36" cy="60" r="7.5" fill="#9EF01A" />
-        <circle cx="36" cy="100" r="5.5" fill="#9EF01A" />
-        <line x1="36" y1="25.5" x2="36" y2="52.5" stroke="#9EF01A" strokeWidth="4.5" strokeLinecap="round" />
-        <line x1="36" y1="67.5" x2="36" y2="94.5" stroke="#9EF01A" strokeWidth="4.5" strokeLinecap="round" />
-        <circle cx="92" cy="20" r="5.5" fill="#9EF01A" />
-        <path d="M43 53 Q60 36 87 23" stroke="#9EF01A" strokeWidth="4.5" strokeLinecap="round" fill="none" />
-        <circle cx="92" cy="100" r="5.5" fill="#9EF01A" />
-        <path d="M43 67 Q60 84 87 97" stroke="#9EF01A" strokeWidth="4.5" strokeLinecap="round" fill="none" />
-      </g>
-      <line x1="65" y1="22" x2="65" y2="78" stroke="rgba(255,255,255,0.07)" strokeWidth="1" />
-      <text
-        x="76" y="58"
-        fontFamily="'Syne','Inter',sans-serif"
-        fontSize="42"
-        fontWeight="800"
-        fill="#FFFFFF"
-        letterSpacing="-1.5"
-      >
-        kinexis
-      </text>
-    </svg>
-  );
-}
 
 /* ═══════════════════════════════════════════
    ARROW ICON
@@ -364,19 +360,6 @@ function DownloadIcon() {
 
 export default function ResourcesPageClient() {
   const [searchQuery, setSearchQuery] = useState("");
-  const [authUser, setAuthUser] = useState<{ initials: string } | null>(null);
-  const [menuOpen, setMenuOpen] = useState(false);
-
-  /* ── Auth check for nav avatar ── */
-  useEffect(() => {
-    (async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const initials = (user.email || "?").slice(0, 2).toUpperCase();
-        setAuthUser({ initials });
-      }
-    })();
-  }, []);
 
   /* ── Scroll reveal ── */
   useEffect(() => {
@@ -394,23 +377,6 @@ export default function ResourcesPageClient() {
     document.querySelectorAll(".reveal, .reveal-grid").forEach((el) => io.observe(el));
     return () => io.disconnect();
   }, []);
-
-  /* ── Escape key for menu ── */
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && menuOpen) setMenuOpen(false);
-    };
-    document.addEventListener("keydown", handler);
-    return () => document.removeEventListener("keydown", handler);
-  }, [menuOpen]);
-
-  /* ── Body scroll lock for menu ── */
-  useEffect(() => {
-    document.body.style.overflow = menuOpen ? "hidden" : "";
-    return () => { document.body.style.overflow = ""; };
-  }, [menuOpen]);
-
-  const toggleMenu = useCallback(() => setMenuOpen((v) => !v), []);
 
   /* ── Filtered resources ── */
   const filteredResources = useMemo(() => {
@@ -433,67 +399,7 @@ export default function ResourcesPageClient() {
 
   return (
     <>
-      {/* ── NAV ── */}
-      <nav>
-        <Link href="/" className="logo-svg" style={{ display: "flex", alignItems: "center", flexShrink: 0, textDecoration: "none" }}>
-          <LogoSVG />
-        </Link>
-        <div className="nav-links">
-          <Link href="/" style={{ textDecoration: "none" }}>Home</Link>
-          <Link href="/resources" style={{ textDecoration: "none", color: "#fff" }}>Resources</Link>
-          <a href="https://kinexis.in/events" target="_blank" rel="noopener noreferrer">Events</a>
-          <a href="https://kinexis.in/clubs" target="_blank" rel="noopener noreferrer">Clubs</a>
-        </div>
-        <div className="nav-r">
-          {authUser ? (
-            <Link href="/profile" prefetch={false} style={{ textDecoration: "none" }}>
-              <div style={{ width: 34, height: 34, borderRadius: "50%", background: "#9EF01A", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "var(--font-syne),'Syne',sans-serif", fontSize: 12, fontWeight: 800, color: "#111", cursor: "pointer" }}>
-                {authUser.initials}
-              </div>
-            </Link>
-          ) : (
-            <>
-              <Link href="/login" prefetch={false} className="btn-login">Log in</Link>
-              <Link href="/signup" prefetch={false} className="btn-signup">Sign up free</Link>
-            </>
-          )}
-          <button className={`hamburger${menuOpen ? " open" : ""}`} aria-label="Menu" onClick={toggleMenu}>
-            <span /><span /><span />
-          </button>
-        </div>
-      </nav>
-
-      {/* ── MOBILE MENU OVERLAY ── */}
-      <div className={`menu-overlay${menuOpen ? " open" : ""}`} onClick={toggleMenu} />
-
-      {/* ── MOBILE SIDE PANEL ── */}
-      <div className={`mobile-menu${menuOpen ? " open" : ""}`}>
-        <div className="mobile-menu-header">
-          <LogoSVG />
-          <button className="mobile-menu-close" onClick={toggleMenu} aria-label="Close">
-            <svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <line x1="2" y1="2" x2="14" y2="14" stroke="rgba(255,255,255,0.6)" strokeWidth="1.8" strokeLinecap="round" />
-              <line x1="14" y1="2" x2="2" y2="14" stroke="rgba(255,255,255,0.6)" strokeWidth="1.8" strokeLinecap="round" />
-            </svg>
-          </button>
-        </div>
-        <div className="mobile-menu-links">
-          <Link href="/" onClick={toggleMenu}>Home</Link>
-          <Link href="/resources" onClick={toggleMenu}>Resources</Link>
-          <a href="https://kinexis.in/events" target="_blank" rel="noopener noreferrer" onClick={toggleMenu}>Events</a>
-          <a href="https://kinexis.in/clubs" target="_blank" rel="noopener noreferrer" onClick={toggleMenu}>Clubs</a>
-        </div>
-        <div className="mobile-menu-ctas">
-          {authUser ? (
-            <Link href="/profile" prefetch={false} className="btn-signup-m">My Profile</Link>
-          ) : (
-            <>
-              <Link href="/signup" prefetch={false} className="btn-signup-m">Sign up free</Link>
-              <Link href="/login" prefetch={false} className="btn-login-m">Log in</Link>
-            </>
-          )}
-        </div>
-      </div>
+      <TopNav />
 
       {/* ── HERO ── */}
       <section className="res-hero">
