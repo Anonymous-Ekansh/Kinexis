@@ -6,6 +6,52 @@ import { supabase } from "@/lib/supabase";
 import "./resources.css";
 
 /* ═══════════════════════════════════════════
+   SVG ICONS
+   ═══════════════════════════════════════════ */
+
+const iconMap: Record<string, React.ReactNode> = {
+  building: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 21h18M5 21V7l8-4v18M13 21V3l6 3v15M9 7v.01M9 11v.01M9 15v.01M17 8v.01M17 12v.01M17 16v.01" /></svg>
+  ),
+  flask: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 3h6M10 3v6.5L4 20h16L14 9.5V3M7.5 16h9" /></svg>
+  ),
+  chart: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18M7 16l4-4 4 4 5-6" /></svg>
+  ),
+  clipboard: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="5" y="3" width="14" height="18" rx="2" /><path d="M9 7h6M9 11h6M9 15h4" /></svg>
+  ),
+  clock: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 3" /></svg>
+  ),
+  calendar: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="17" rx="2" /><path d="M8 2v4M16 2v4M3 10h18M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01" /></svg>
+  ),
+  users: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="7" r="3" /><path d="M3 21v-2a4 4 0 014-4h4a4 4 0 014 4v2" /><circle cx="17" cy="8" r="2.5" /><path d="M21 21v-1.5a3 3 0 00-3-3h-.5" /></svg>
+  ),
+  map: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3V6z" /><path d="M9 3v15M15 6v15" /></svg>
+  ),
+  globe: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9" /><path d="M3.6 9h16.8M3.6 15h16.8" /><path d="M12 3a15 15 0 010 18 15 15 0 010-18z" /></svg>
+  ),
+  fileText: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z" /><path d="M14 2v6h6M10 13h4M10 17h4M8 9h2" /></svg>
+  ),
+  book: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 016.5 17H20" /><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z" /><path d="M8 7h8M8 11h5" /></svg>
+  ),
+  link: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71" /></svg>
+  ),
+  search: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="7" /><path d="M21 21l-4.35-4.35" /></svg>
+  ),
+};
+
+/* ═══════════════════════════════════════════
    RESOURCE DATA
    ═══════════════════════════════════════════ */
 
@@ -24,7 +70,7 @@ const resources: ResourceItem[] = [
   {
     title: "Find Professor Offices",
     description: "Look up office locations and room numbers for all professors across departments.",
-    icon: "🏫",
+    icon: "building",
     accent: "lime",
     href: "https://rslookup.abs.moe/prof",
     type: "link",
@@ -33,7 +79,7 @@ const resources: ResourceItem[] = [
   {
     title: "Find All Labs",
     description: "Locate labs across campus — CS labs, electronics labs, physics labs, and more.",
-    icon: "🔬",
+    icon: "flask",
     accent: "cyan",
     href: "https://rslookup.abs.moe/lab",
     type: "link",
@@ -42,7 +88,7 @@ const resources: ResourceItem[] = [
   {
     title: "GPA Calculator",
     description: "Calculate your semester and cumulative GPA with SNU's grading scale.",
-    icon: "📊",
+    icon: "chart",
     accent: "purple",
     href: "https://rslookup.abs.moe/gpa",
     type: "link",
@@ -51,7 +97,7 @@ const resources: ResourceItem[] = [
   {
     title: "Attendance Calculator",
     description: "Track your attendance percentage and figure out how many classes you can skip.",
-    icon: "📋",
+    icon: "clipboard",
     accent: "coral",
     href: "https://rslookup.abs.moe/attendance",
     type: "link",
@@ -60,7 +106,7 @@ const resources: ResourceItem[] = [
   {
     title: "Amenities & Timings",
     description: "Check timings for the mess, gym, library, sports complex, and other campus amenities.",
-    icon: "⏰",
+    icon: "clock",
     accent: "lime",
     href: "https://rslookup.abs.moe/amenity",
     type: "link",
@@ -71,7 +117,7 @@ const resources: ResourceItem[] = [
   {
     title: "Upcoming Events",
     description: "Never miss a hackathon, fest, workshop, or social. See everything happening on campus.",
-    icon: "🎉",
+    icon: "calendar",
     accent: "coral",
     href: "https://kinexis.in/events",
     type: "link",
@@ -80,7 +126,7 @@ const resources: ResourceItem[] = [
   {
     title: "All Clubs",
     description: "Browse 40+ student clubs across tech, arts, sports, culture, and entrepreneurship.",
-    icon: "🎭",
+    icon: "users",
     accent: "purple",
     href: "https://kinexis.in/clubs",
     type: "link",
@@ -91,7 +137,7 @@ const resources: ResourceItem[] = [
   {
     title: "Interactive Campus Map",
     description: "Find your way around campus with an interactive, searchable map of all buildings and blocks.",
-    icon: "🗺️",
+    icon: "map",
     accent: "cyan",
     href: "https://maps.rohitjg.com/",
     type: "link",
@@ -100,7 +146,7 @@ const resources: ResourceItem[] = [
   {
     title: "Google Earth 3D View",
     description: "Explore the campus in immersive 3D with Google Earth — great for new students.",
-    icon: "🌐",
+    icon: "globe",
     accent: "lime",
     href: "https://earth.google.com/earth/d/1rJBpRt96G15WO5OWFTcx9jBcj6lwozJH?usp=sharing",
     type: "link",
@@ -111,7 +157,7 @@ const resources: ResourceItem[] = [
   {
     title: "Swayam Course Guide",
     description: "Complete guide to enrolling, completing, and getting credits for Swayam/NPTEL courses.",
-    icon: "📄",
+    icon: "fileText",
     accent: "purple",
     href: "#",
     type: "pdf",
@@ -122,7 +168,7 @@ const resources: ResourceItem[] = [
   {
     title: "CCC Course Guide",
     description: "Comprehensive guide to Cross-cutting Capacity courses — selections, credits, and tips.",
-    icon: "📄",
+    icon: "fileText",
     accent: "cyan",
     href: "#",
     type: "pdf",
@@ -131,7 +177,7 @@ const resources: ResourceItem[] = [
   {
     title: "UWE Course Guide",
     description: "Everything you need to know about University Wide Electives — options and recommendations.",
-    icon: "📄",
+    icon: "fileText",
     accent: "lime",
     href: "#",
     type: "pdf",
@@ -140,7 +186,7 @@ const resources: ResourceItem[] = [
   {
     title: "Major Elective Guide",
     description: "How to choose the right major electives — department-wise breakdown and prerequisites.",
-    icon: "📄",
+    icon: "fileText",
     accent: "coral",
     href: "#",
     type: "pdf",
@@ -151,7 +197,7 @@ const resources: ResourceItem[] = [
   {
     title: "UG Handbook",
     description: "The official undergraduate handbook — academic policies, grading system, rules, and more.",
-    icon: "📘",
+    icon: "book",
     accent: "purple",
     href: "#",
     type: "pdf",
@@ -162,7 +208,7 @@ const resources: ResourceItem[] = [
   {
     title: "SNU Wiki — Setup Guide",
     description: "Official wiki for WiFi setup, Net ID activation, email configuration, and IT resources.",
-    icon: "🔗",
+    icon: "link",
     accent: "cyan",
     href: "https://wiki.snu.edu.in/index.php?title=Main_Page",
     type: "link",
@@ -171,7 +217,7 @@ const resources: ResourceItem[] = [
   {
     title: "SNU Links Guide",
     description: "One PDF with all essential SNU links, portals, and how-tos — bookmark this.",
-    icon: "📄",
+    icon: "fileText",
     accent: "lime",
     href: "#",
     type: "pdf",
@@ -482,7 +528,7 @@ export default function ResourcesPageClient() {
       {/* ── SECTIONS ── */}
       {filteredSections.length === 0 && searchQuery.trim() && (
         <div className="res-empty">
-          <div className="res-empty-icon">🔍</div>
+          <div className="res-empty-icon">{iconMap.search}</div>
           <div className="res-empty-text">No resources found</div>
           <div className="res-empty-sub">Try a different search term</div>
         </div>
@@ -518,7 +564,7 @@ export default function ResourcesPageClient() {
                         style={item.href === "#" ? { cursor: "default" } : undefined}
                       >
                         <div className="res-card-icon">
-                          {item.icon}
+                          {iconMap[item.icon] || item.icon}
                         </div>
                         <div className="res-card-title">{item.title}</div>
                         <div className="res-card-desc">{item.description}</div>

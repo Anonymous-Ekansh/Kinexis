@@ -162,6 +162,7 @@ export default function TopNav() {
           <Link href="/collabs" prefetch={false} className={pathname === "/collabs" ? "active" : ""}>Collabs</Link>
           <Link href="/events" prefetch={false} className={pathname === "/events" ? "active" : ""}>Events</Link>
           <Link href="/clubs" prefetch={false} className={pathname === "/clubs" ? "active" : ""}>Clubs</Link>
+          <Link href="/resources" prefetch={false} className={pathname === "/resources" ? "active" : ""}>Resources</Link>
         </div>
         <div className="pf-nav-r">
           <Link href="/messages" prefetch={false} className={`pf-nav-notif ${pathname === "/messages" ? "active" : ""}`} style={{ textDecoration: 'none', color: 'var(--lime)' }} title="Messages"><MessageSquare size={15} /></Link>
@@ -240,6 +241,7 @@ export default function TopNav() {
           <Link href="/events" prefetch={false} onClick={toggleMenu} className={pathname === "/events" ? "active" : ""}>Events</Link>
           <Link href="/messages" prefetch={false} onClick={toggleMenu} className={pathname === "/messages" ? "active" : ""}>Messages</Link>
           <Link href="/clubs" prefetch={false} onClick={toggleMenu} className={pathname === "/clubs" ? "active" : ""}>Clubs</Link>
+          <Link href="/resources" prefetch={false} onClick={toggleMenu} className={pathname === "/resources" ? "active" : ""}>Resources</Link>
         </div>
         <div className="pf-mobile-menu-ctas">
           {profile ? (
